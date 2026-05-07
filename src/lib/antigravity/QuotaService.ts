@@ -11,6 +11,7 @@ const QUOTA_API_ENDPOINTS = [
 ] as const;
 const CLOUD_CODE_BASE_URL = 'https://cloudcode-pa.googleapis.com';
 const USER_AGENT = 'antigravity/1.11.3 Darwin/arm64'; // Keeping the same UA as source
+const QUOTA_FALLBACK_DELAY_MS = 1000;
 
 // Service Class
 export class QuotaService {
@@ -96,99 +97,139 @@ export class QuotaService {
       const hasNextEndpoint = endpointIndex + 1 < QUOTA_API_ENDPOINTS.length;
       logger.info(`Sending quota request to ${endpoint}`);
 
-      try {
-        const response = await client.post<QuotaApiResponse>(endpoint, payload, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'User-Agent': USER_AGENT,
-          },
-        });
+      let currentPayload = payload;
+      let retriedWithoutProject = false;
 
-        const quotaResponse = response.data;
-        const quotaData: QuotaData = {
-          models: {},
-          isForbidden: false,
-          subscriptionTier: subscriptionTier,
-        };
+      while (true) {
+        try {
+          const response = await client.post<QuotaApiResponse>(endpoint, currentPayload, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'User-Agent': USER_AGENT,
+            },
+          });
 
-        logger.info(`Quota API returned ${Object.keys(quotaResponse.models || {}).length} models:`);
+          const quotaResponse = response.data;
+          const quotaData = this.toQuotaData(quotaResponse, subscriptionTier);
 
-        if (quotaResponse.models) {
-          for (const [name, info] of Object.entries(quotaResponse.models)) {
-            logger.info(`   - ${name}`);
-            if (info.quotaInfo) {
-              const fraction = info.quotaInfo.remainingFraction ?? 0;
-              const percentage = Math.floor(fraction * 100);
-              const resetTime = info.quotaInfo.resetTime || '';
+          if (endpointIndex > 0) {
+            logger.info(`Quota API fallback succeeded at endpoint #${endpointIndex + 1}`);
+          }
 
-              // Only save models we care about, filtering out old versions (< 3.0)
-              const isGemini = name.includes('gemini');
-              const isClaude = name.includes('claude');
-              const isOldGemini = /gemini-[12](\.|$|-)/.test(name);
+          return { quotaData, projectId };
+        } catch (error: any) {
+          let shouldFallback = true;
 
-              if ((isGemini || isClaude) && !isOldGemini) {
-                quotaData.models[name] = { percentage, resetTime };
-              }
+          if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            let responseBodyText = '';
+            try {
+              responseBodyText = JSON.stringify(error.response?.data || '');
+            } catch {
+              responseBodyText = '[Unable to serialize response data]';
             }
-          }
-        }
 
-        if (endpointIndex > 0) {
-          logger.info(`Quota API fallback succeeded at endpoint #${endpointIndex + 1}`);
-        }
+            // ✅ Handle 403 Forbidden specifically - return immediately, do not retry
+            if (status === 403) {
+              if (!retriedWithoutProject && 'project' in currentPayload) {
+                logger.warn('Quota API returned 403 with project ID, retrying without project ID');
+                currentPayload = {};
+                retriedWithoutProject = true;
+                continue;
+              }
 
-        return { quotaData, projectId };
-      } catch (error: any) {
-        let shouldFallback = true;
+              logger.warn('Quota API returned 403 without project fallback; marking account as forbidden');
+              return {
+                quotaData: this.createForbiddenQuotaData(subscriptionTier),
+                projectId,
+              };
+            }
 
-        if (axios.isAxiosError(error)) {
-          const status = error.response?.status;
-          let text = '';
-          try {
-            text = JSON.stringify(error.response?.data || '');
-          } catch {
-            text = '[Unable to serialize response data]';
-          }
+            if (hasNextEndpoint && this.shouldFallbackQuotaStatus(status)) {
+              logger.warn(
+                `Quota API ${endpoint} returned ${status}, falling back to next endpoint`,
+              );
+              lastError = new Error(`HTTP ${status} - ${responseBodyText}`);
+              await this.waitBeforeNextQuotaEndpoint();
+              break;
+            }
 
-          // ✅ Handle 403 Forbidden specifically - return immediately, do not retry
-          if (status === 403) {
-            logger.warn(`Account no permission (403 Forbidden), marked as forbidden`);
-            return {
-              quotaData: {
-                models: {},
-                isForbidden: true,
-                subscriptionTier: subscriptionTier,
-              },
-              projectId,
-            };
-          }
-
-          if (hasNextEndpoint && (status === 429 || (isNumber(status) && status >= 500))) {
-            logger.warn(
-              `Quota API ${endpoint} returned ${status}, falling back to next endpoint`,
-            );
-            lastError = new Error(`HTTP ${status} - ${text}`);
-            await new Promise((r) => setTimeout(r, 1000));
-            continue;
+            logger.warn(`Quota API returned ${status}: ${responseBodyText}`);
+            lastError = new Error(`HTTP ${status} - ${responseBodyText}`);
+            shouldFallback = !isNumber(status);
+          } else {
+            logger.warn(`Quota API request failed at ${endpoint}: ${error.message}`);
+            lastError = error instanceof Error ? error : new Error(String(error));
           }
 
-          logger.warn(`API Error: ${status} - ${text}`);
-          lastError = new Error(`HTTP ${status} - ${text}`);
-          shouldFallback = !isNumber(status);
-        } else {
-          logger.warn(`Request Failed at ${endpoint}: ${error.message}`);
-          lastError = error instanceof Error ? error : new Error(String(error));
-        }
-
-        if (hasNextEndpoint && shouldFallback) {
-          logger.warn(`Quota API request failed at ${endpoint}, falling back to next endpoint`);
-          await new Promise((r) => setTimeout(r, 1000));
-        } else {
-          throw lastError ?? new Error(`Quota query failed: ${error.message}`);
+          if (hasNextEndpoint && shouldFallback) {
+            logger.warn(`Quota API request failed at ${endpoint}, falling back to next endpoint`);
+            await this.waitBeforeNextQuotaEndpoint();
+            break;
+          } else {
+            throw lastError ?? new Error(`Quota query failed: ${error.message}`);
+          }
         }
       }
     }
 
     throw lastError ?? new Error('Unknown error in fetchQuota');
+  }
+
+  private static toQuotaData(
+    quotaResponse: QuotaApiResponse,
+    subscriptionTier: string | undefined,
+  ): QuotaData {
+    const quotaData: QuotaData = {
+      models: {},
+      isForbidden: false,
+      subscriptionTier,
+    };
+
+    logger.info(`Quota API returned ${Object.keys(quotaResponse.models || {}).length} models:`);
+
+    if (!quotaResponse.models) {
+      return quotaData;
+    }
+
+    for (const [modelName, modelInfo] of Object.entries(quotaResponse.models)) {
+      logger.info(`   - ${modelName}`);
+      if (!modelInfo.quotaInfo) {
+        continue;
+      }
+
+      const remainingFraction = modelInfo.quotaInfo.remainingFraction ?? 0;
+      const percentage = Math.floor(remainingFraction * 100);
+      const resetTime = modelInfo.quotaInfo.resetTime || '';
+
+      // Only save models we care about, filtering out old versions (< 3.0)
+      const isGeminiModel = modelName.includes('gemini');
+      const isClaudeModel = modelName.includes('claude');
+      const isLegacyGeminiModel = /gemini-[12](\.|$|-)/.test(modelName);
+
+      if ((isGeminiModel || isClaudeModel) && !isLegacyGeminiModel) {
+        quotaData.models[modelName] = { percentage, resetTime };
+      }
+    }
+
+    return quotaData;
+  }
+
+  private static createForbiddenQuotaData(subscriptionTier: string | undefined): QuotaData {
+    return {
+      models: {},
+      isForbidden: true,
+      subscriptionTier,
+    };
+  }
+
+  private static shouldFallbackQuotaStatus(status: unknown): boolean {
+    return status === 429 || (isNumber(status) && status >= 500);
+  }
+
+  private static async waitBeforeNextQuotaEndpoint(): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, QUOTA_FALLBACK_DELAY_MS);
+    });
   }
 }

@@ -27,9 +27,9 @@ import {
  * Request Configuration
  * Contains request type, model, and image generation configuration
  */
-interface RequestConfig {
+interface ResolvedRequestConfig {
   /** Request type: 'agent', 'web_search', 'image_gen' */
-  requestType: string;
+  requestType: RequestType;
   /** Whether to inject Google Search tool */
   injectGoogleSearch: boolean;
   /** Final model name to use */
@@ -38,9 +38,16 @@ interface RequestConfig {
   imageConfig: ImageConfig | null;
 }
 
-// --- Main Logic ---
+type RequestType = 'agent' | 'web_search' | 'image_gen';
 
-// --- Main Logic ---
+const AGENT_CREDIT_TYPES = ['GOOGLE_ONE_AI'];
+const SAFETY_SETTINGS: SafetySetting[] = [
+  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'OFF' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'OFF' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'OFF' },
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'OFF' },
+  { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'OFF' },
+];
 
 /**
  * Transforms Claude request into Gemini internal request format
@@ -66,19 +73,19 @@ export function transformClaudeRequestIn(
   const mappedModel = hasWebSearchTool ? 'gemini-3-flash' : mapClaudeModelToGemini(claudeReq.model);
 
   // Convert Claude tools to Tool array for networking detection
-  const toolsVal: Tool[] | undefined = claudeReq.tools
+  const normalizedTools: Tool[] | undefined = claudeReq.tools
     ? (JSON.parse(JSON.stringify(claudeReq.tools)) as Tool[])
     : undefined;
 
   // Resolve grounding config
-  const config = resolveRequestConfig(claudeReq.model, mappedModel, toolsVal);
+  const requestConfig = resolveRequestConfig(claudeReq.model, mappedModel, normalizedTools);
 
-  const allowDummyThought = config.finalModel.startsWith('gemini-');
+  const allowDummyThought = requestConfig.finalModel.startsWith('gemini-');
 
   // 4. Generation Config & Thinking
   const thinkingType = (claudeReq.thinking?.type ?? '').toLowerCase();
   const autoThinkingEnabled =
-    !claudeReq.thinking && shouldEnableThinkingByDefault(config.finalModel, claudeReq.model);
+    !claudeReq.thinking && shouldEnableThinkingByDefault(requestConfig.finalModel, claudeReq.model);
   let isThinkingEnabled =
     thinkingType === 'enabled' || thinkingType === 'adaptive' || autoThinkingEnabled;
 
@@ -92,7 +99,7 @@ export function transformClaudeRequestIn(
     });
 
     if (hasFunctionCalls && !hasValidSignatureForFunctionCalls(claudeReq.messages, globalSig)) {
-      if (!isGeminiFlashModel(config.finalModel)) {
+      if (!isGeminiFlashModel(requestConfig.finalModel)) {
         isThinkingEnabled = false;
       }
     }
@@ -101,7 +108,7 @@ export function transformClaudeRequestIn(
   const generationConfig = buildGenerationConfig(
     claudeReq,
     hasWebSearchTool,
-    config.finalModel,
+    requestConfig.finalModel,
     isThinkingEnabled,
   );
   // Update thinking config based on the final decision
@@ -115,20 +122,11 @@ export function transformClaudeRequestIn(
     toolIdToName,
     isThinkingEnabled,
     allowDummyThought,
-    config.finalModel,
+    requestConfig.finalModel,
   );
 
   // 3. Tools
-  const tools = buildTools(claudeReq.tools, hasWebSearchTool, config.finalModel);
-
-  // 5. Safety Settings
-  const safetySettings = [
-    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'OFF' },
-    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'OFF' },
-    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'OFF' },
-    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'OFF' },
-    { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'OFF' },
-  ];
+  const tools = buildTools(claudeReq.tools, hasWebSearchTool, requestConfig.finalModel);
 
   // Build inner request
   const innerRequest: {
@@ -140,7 +138,7 @@ export function transformClaudeRequestIn(
     toolConfig?: { functionCallingConfig: { mode: string } };
   } = {
     contents,
-    safetySettings,
+    safetySettings: [...SAFETY_SETTINGS],
   };
 
   deepCleanUndefined(innerRequest);
@@ -159,48 +157,72 @@ export function transformClaudeRequestIn(
   }
 
   // Inject googleSearch tool if needed (and not already done by buildTools)
-  if (config.injectGoogleSearch && !hasWebSearchTool) {
-    injectGoogleSearchTool(innerRequest, config.finalModel);
+  if (requestConfig.injectGoogleSearch && !hasWebSearchTool) {
+    injectGoogleSearchTool(innerRequest, requestConfig.finalModel);
   }
 
   // Inject imageConfig if present (for image generation models)
-  if (config.imageConfig) {
+  if (requestConfig.imageConfig) {
     // 1. Remove tools (image generation does not support tools)
     delete innerRequest.tools;
     // 2. Remove systemInstruction (image generation does not support system prompts)
     delete innerRequest.systemInstruction;
 
     // 3. Clean generationConfig
-    const genConfig = innerRequest.generationConfig || {};
-    delete genConfig.thinkingConfig;
-    delete genConfig.responseMimeType;
-    delete genConfig.responseModalities;
-    genConfig.imageConfig = config.imageConfig;
-    innerRequest.generationConfig = genConfig;
+    const imageGenerationConfig = innerRequest.generationConfig || {};
+    delete imageGenerationConfig.thinkingConfig;
+    delete imageGenerationConfig.responseMimeType;
+    delete imageGenerationConfig.responseModalities;
+    imageGenerationConfig.imageConfig = requestConfig.imageConfig;
+    innerRequest.generationConfig = imageGenerationConfig;
   }
 
-  const requestId = `agent-${uuidv4()}`;
-
-  const normalizedProjectId = projectId?.trim();
-
-  const discoveryVersion = resolveLocalInstalledVersion() ?? FALLBACK_VERSION;
-  const body: GeminiInternalRequest = {
-    requestId: requestId,
-    request: innerRequest as GeminiInternalRequest['request'],
-    model: config.finalModel,
-    userAgent: userAgent?.trim() || buildUserAgent(discoveryVersion),
-    requestType: config.requestType,
-  };
-
-  if (normalizedProjectId) {
-    body.project = normalizedProjectId;
-  }
+  const body = buildInternalRequestBody({
+    requestConfig,
+    innerRequest: innerRequest as GeminiInternalRequest['request'],
+    projectId,
+    userAgent,
+  });
 
   if (claudeReq.metadata?.user_id) {
     body.sessionId = claudeReq.metadata.user_id;
   }
 
   return body;
+}
+
+function buildInternalRequestBody(params: {
+  requestConfig: ResolvedRequestConfig;
+  innerRequest: GeminiInternalRequest['request'];
+  projectId?: string;
+  userAgent?: string;
+}): GeminiInternalRequest {
+  const normalizedProjectId = params.projectId?.trim();
+  const discoveryVersion = resolveLocalInstalledVersion() ?? FALLBACK_VERSION;
+  const isAgentRequest = params.requestConfig.requestType !== 'image_gen';
+  const body: GeminiInternalRequest = {
+    requestId: createOfficialRequestId(),
+    request: params.innerRequest,
+    model: params.requestConfig.finalModel,
+    userAgent: params.userAgent?.trim() || buildUserAgent(discoveryVersion),
+    requestType: isAgentRequest ? 'agent' : 'image_gen',
+  };
+
+  if (normalizedProjectId) {
+    body.project = normalizedProjectId;
+  }
+
+  if (isAgentRequest) {
+    body.enabledCreditTypes = [...AGENT_CREDIT_TYPES];
+  }
+
+  return body;
+}
+
+function createOfficialRequestId(): string {
+  const timestampMs = Date.now();
+  const randomHex = uuidv4().replace(/-/g, '').slice(0, 8);
+  return `agent/${timestampMs}/${randomHex}`;
 }
 
 /**
@@ -211,7 +233,7 @@ function resolveRequestConfig(
   originalModel: string,
   mappedModel: string,
   tools?: Tool[],
-): RequestConfig {
+): ResolvedRequestConfig {
   // 1. Image Generation Check
   if (isGeminiImageModel(mappedModel)) {
     const { imageConfig, parsedBaseModel } = parseImageConfig(originalModel);

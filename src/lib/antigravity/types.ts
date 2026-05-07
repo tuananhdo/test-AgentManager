@@ -279,6 +279,7 @@ export interface GeminiInternalRequest {
   userAgent: string;
   requestType?: string;
   sessionId?: string;
+  enabledCreditTypes?: string[];
 }
 
 export interface GeminiContent {
