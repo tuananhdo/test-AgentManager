@@ -21,11 +21,12 @@ import {
   readCurrentDeviceProfile,
   saveGlobalOriginalProfile,
 } from '../../ipc/device/handler';
-import { getAntigravityDbPaths } from '../../utils/paths';
+import { getAntigravityDbPaths, getAntigravityDbPathsForEdition } from '../../utils/paths';
 import { runWithSwitchGuard } from '../../ipc/switchGuard';
 import { executeSwitchFlow } from '../../ipc/switchFlow';
 import type { DeviceProfile, DeviceProfilesSnapshot } from '../../types/account';
 import { classifyAccountStatusFromError, extractErrorMessage } from '../../utils/account-status';
+import { ConfigManager } from '../../ipc/config/manager';
 
 // Helper to update tray
 function notifyTrayUpdate(account: CloudAccount) {
@@ -550,9 +551,12 @@ export async function switchCloudAccount(accountId: string): Promise<void> {
         targetProfile: account.device_profile || null,
         applyFingerprint: isIdentityProfileApplyEnabled(),
         processExitTimeoutMs: 10000,
-        performSwitch: async () => {
+        edition: ConfigManager.getCachedConfig()?.ideEdition || undefined,
+        performSwitch: async (edition) => {
           // 3. Backup Database (Optimized to avoid race conditions)
-          const dbPaths = getAntigravityDbPaths();
+          const dbPaths = edition
+            ? getAntigravityDbPathsForEdition(edition)
+            : getAntigravityDbPaths();
           for (const dbPath of dbPaths) {
             try {
               const backupPath = `${dbPath}.backup`;
@@ -567,7 +571,7 @@ export async function switchCloudAccount(accountId: string): Promise<void> {
           }
 
           // 4. Inject Token
-          CloudAccountRepo.injectCloudToken(account);
+          CloudAccountRepo.injectCloudToken(account, edition);
 
           // 5. Update usage and active status
           CloudAccountRepo.updateLastUsed(account.id);
@@ -839,7 +843,7 @@ export async function importCloudAccounts(
         result.imported++;
       }
     } catch (error: any) {
-      result.errors.push(`Failed to import ${acc.email}: ${error.message}`);
+      result.errors.push(`Failed to import ${importedAccount.email}: ${error.message}`);
     }
   }
 

@@ -7,13 +7,15 @@ import {
   recordSwitchFailure,
   recordSwitchSuccess,
 } from './switchMetrics';
+import type { IdeEdition } from '../types/config';
 
 export interface SwitchFlowOptions {
   scope: 'local' | 'cloud';
   targetProfile: DeviceProfile | null;
   applyFingerprint: boolean;
   processExitTimeoutMs: number;
-  performSwitch: () => Promise<void>;
+  edition?: IdeEdition;
+  performSwitch: (edition?: IdeEdition) => Promise<void>;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -51,13 +53,13 @@ function toSwitchFailureReason(stage: string, error: unknown): SwitchFailureReas
 }
 
 export async function executeSwitchFlow(options: SwitchFlowOptions): Promise<void> {
-  const { scope, targetProfile, applyFingerprint, processExitTimeoutMs, performSwitch } = options;
+  const { scope, targetProfile, applyFingerprint, processExitTimeoutMs, edition, performSwitch } = options;
 
   let stage = 'close';
   try {
-    await closeAntigravity();
+    await closeAntigravity(edition);
     try {
-      await _waitForProcessExit(processExitTimeoutMs);
+      await _waitForProcessExit(processExitTimeoutMs, 100, edition);
     } catch (error) {
       logger.warn('Process did not exit cleanly within timeout, but proceeding...', error);
     }
@@ -76,9 +78,9 @@ export async function executeSwitchFlow(options: SwitchFlowOptions): Promise<voi
     }
 
     stage = 'switch';
-    await performSwitch();
+    await performSwitch(edition);
     stage = 'start';
-    await startAntigravity();
+    await startAntigravity(edition);
     recordSwitchSuccess(scope);
   } catch (error) {
     const reason = toSwitchFailureReason(stage, error);

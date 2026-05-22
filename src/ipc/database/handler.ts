@@ -6,10 +6,11 @@ import { isString } from 'lodash-es';
 import { AccountBackupData, AccountInfo } from '../../types/account';
 import { ItemTableValueRowSchema, type ItemTableKey } from '../../types/db';
 import { logger } from '../../utils/logger';
-import { getAntigravityDbPaths } from '../../utils/paths';
+import { getAntigravityDbPaths, getAntigravityDbPathsForEdition } from '../../utils/paths';
 import { parseRow } from '../../utils/sqlite';
 import { openDrizzleConnection } from './dbConnection';
 import { itemTable } from './schema';
+import type { IdeEdition } from '../../types/config';
 
 const KEYS_TO_BACKUP: ItemTableKey[] = [
   'antigravityAuthStatus',
@@ -29,14 +30,16 @@ function openIdeDb(dbPath: string, readOnly = false): ReturnType<typeof openDriz
  * Initializes the database and ensures WAL mode is enabled.
  * Should be called on application startup.
  */
-export function initDatabase(): void {
+export function initDatabase(edition?: IdeEdition): void {
   try {
-    const dbPaths = getAntigravityDbPaths();
+    const dbPaths = edition
+      ? getAntigravityDbPathsForEdition(edition)
+      : getAntigravityDbPaths();
     if (dbPaths.length === 0) {
       return;
     }
 
-    const { raw } = getDatabaseConnection();
+    const { raw } = getDatabaseConnection(undefined, edition);
     raw.close();
     logger.info('Database initialized and verified (WAL mode)');
   } catch (error) {
@@ -83,10 +86,14 @@ function ensureDatabaseExists(dbPath: string): void {
 /**
  * Gets a database connection.
  * @param dbPath {string} The path to the database file.
+ * @param edition {IdeEdition} The IDE edition to use for path resolution.
  * @returns {ReturnType<typeof openDrizzleConnection>} The database connection.
  */
-export function getDatabaseConnection(dbPath?: string): ReturnType<typeof openDrizzleConnection> {
-  const targetPath = dbPath || getAntigravityDbPaths()[0];
+export function getDatabaseConnection(
+  dbPath?: string,
+  edition?: IdeEdition,
+): ReturnType<typeof openDrizzleConnection> {
+  const targetPath = dbPath || (edition ? getAntigravityDbPathsForEdition(edition) : getAntigravityDbPaths())[0];
 
   if (!targetPath) {
     throw new Error('No Antigravity database path found');
@@ -123,11 +130,11 @@ function readItemValue(
  * Gets the current account info.
  * @returns {AccountInfo} The current account info.
  */
-export function getCurrentAccountInfo(): AccountInfo {
+export function getCurrentAccountInfo(edition?: IdeEdition): AccountInfo {
   // NOTE Database existence is now handled by getDatabaseConnection
   let connection: ReturnType<typeof openDrizzleConnection> | null = null;
   try {
-    connection = getDatabaseConnection();
+    connection = getDatabaseConnection(undefined, edition);
     const { orm } = connection;
 
     // Query for auth status
@@ -225,10 +232,13 @@ export function getCurrentAccountInfo(): AccountInfo {
   }
 }
 
-export function backupAccount(account: AccountBackupData['account']): AccountBackupData {
+export function backupAccount(
+  account: AccountBackupData['account'],
+  edition?: IdeEdition,
+): AccountBackupData {
   let connection: ReturnType<typeof openDrizzleConnection> | null = null;
   try {
-    connection = getDatabaseConnection();
+    connection = getDatabaseConnection(undefined, edition);
     const { orm } = connection;
 
     // NOTE Backup only specific keys
@@ -272,8 +282,10 @@ export function backupAccount(account: AccountBackupData['account']): AccountBac
  * @param backup {AccountBackupData} The backup data to restore.
  * @throws {Error} If the backup data cannot be restored.
  */
-export function restoreAccount(backup: AccountBackupData): void {
-  const dbPaths = getAntigravityDbPaths();
+export function restoreAccount(backup: AccountBackupData, edition?: IdeEdition): void {
+  const dbPaths = edition
+    ? getAntigravityDbPathsForEdition(edition)
+    : getAntigravityDbPaths();
   if (dbPaths.length === 0) {
     throw new Error('No Antigravity database paths found');
   }
