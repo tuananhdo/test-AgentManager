@@ -44,7 +44,8 @@ const vi = {
   },
   editionSelection: {
     title: 'Chọn phiên bản Antigravity',
-    description: 'Chọn phiên bản Antigravity bạn đang sử dụng. Điều này giúp Manager kết nối đúng ứng dụng.',
+    description:
+      'Chọn phiên bản Antigravity bạn đang sử dụng. Điều này giúp Manager kết nối đúng ứng dụng.',
     edition1x: {
       name: 'Antigravity 1.x',
       description: 'Ứng dụng Antigravity gốc. Chọn nếu bạn đang dùng phiên bản cũ.',
@@ -58,6 +59,8 @@ const vi = {
   account: {
     current: 'Hiện tại',
     lastUsed: 'Đã dùng {{time}}',
+    switchToClassic: 'Chuyển sang Antigravity (Classic)',
+    switchToIde: 'Chuyển sang Antigravity IDE',
   },
   home: {
     title: 'Tài khoản',
@@ -89,13 +92,6 @@ const vi = {
       vietnamese: 'Tiếng Việt',
       turkish: 'Tiếng Thổ Nhĩ Kỳ',
     },
-    ideEdition: {
-      title: 'Phiên bản Antigravity',
-      description: 'Chọn phiên bản Antigravity bạn đang sử dụng.',
-      placeholder: 'Chọn phiên bản',
-      edition1x: 'Antigravity 1.x',
-      edition20: 'Antigravity IDE',
-    },
     about: {
       title: 'Thông tin',
       description: 'Thông tin ứng dụng.',
@@ -120,6 +116,19 @@ const vi = {
       auto_refresh_desc: 'Định kỳ cập nhật thông tin quota cho tất cả tài khoản',
       auto_sync: 'Tự động đồng bộ tài khoản hiện tại',
       auto_sync_desc: 'Định kỳ đồng bộ thông tin tài khoản đang hoạt động',
+      antigravity_executable: 'Tệp chạy Antigravity',
+      antigravity_executable_desc:
+        'Đường dẫn tùy chọn dùng để tìm dữ liệu portable mode và khởi chạy Antigravity.',
+      antigravity_executable_placeholder: 'Ví dụ: C:\\Program Files\\Antigravity\\Antigravity.exe',
+      antigravity_ide_executable: 'Tệp chạy Antigravity IDE',
+      antigravity_ide_executable_desc:
+        'Đường dẫn tùy chọn đến Antigravity IDE. Khi chuyển tài khoản Classic, tiến trình tại đường dẫn này sẽ được bảo vệ khỏi bị tắt.',
+      antigravity_ide_executable_placeholder:
+        'Ví dụ: C:\\Program Files\\Antigravity IDE\\Antigravity IDE.exe',
+      antigravity_args: 'Tham số khởi chạy Antigravity',
+      antigravity_args_desc: 'Tham số tùy chọn khi khởi chạy Antigravity, ví dụ --user-data-dir.',
+      antigravity_args_placeholder: 'Ví dụ: --user-data-dir D:\\AntigravityProfile',
+      detect_antigravity_args: 'Phát hiện',
     },
     startup: {
       title: 'Khởi động',
@@ -277,7 +286,7 @@ const vi = {
     autoSwitch: 'Tự động chuyển',
     providerGroupings: 'Nhóm theo nhà cung cấp',
     addAccount: 'Thêm tài khoản',
-    syncFromIDE: 'Đồng bộ từ IDE',
+    syncFromIde: 'Đồng bộ từ IDE',
     checkQuota: 'Kiểm tra quota ngay',
     polling: 'Đã kích hoạt polling',
     globalQuota: 'Quota tổng',

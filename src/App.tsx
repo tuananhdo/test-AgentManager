@@ -10,13 +10,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { useAppConfig } from '@/hooks/useAppConfig';
-import { EditionSelectionDialog } from '@/components/EditionSelectionDialog';
-import type { IdeEdition } from '@/types/config';
 
 function AppContent() {
   const { i18n } = useTranslation();
-  const { config, isLoading, saveConfig } = useAppConfig();
 
   useEffect(() => {
     syncWithLocalTheme();
@@ -26,20 +22,7 @@ function AppContent() {
     }
   }, [i18n]);
 
-  const handleEditionSelect = async (edition: IdeEdition) => {
-    if (config) {
-      await saveConfig({ ...config, ideEdition: edition });
-    }
-  };
-
-  const showEditionDialog = !isLoading && !!config && !config.ideEdition;
-
-  return (
-    <>
-      <RouterProvider router={router} />
-      <EditionSelectionDialog open={showEditionDialog} onSelect={handleEditionSelect} />
-    </>
-  );
+  return <RouterProvider router={router} />;
 }
 
 function App() {

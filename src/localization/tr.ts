@@ -44,7 +44,8 @@ const tr = {
   },
   editionSelection: {
     title: 'Antigravity Sürümünüzü Seçin',
-    description: 'Kullandığınız Antigravity sürümünü seçin. Bu, Manager\'ın doğru uygulamaya bağlanmasını sağlar.',
+    description:
+      "Kullandığınız Antigravity sürümünü seçin. Bu, Manager'ın doğru uygulamaya bağlanmasını sağlar.",
     edition1x: {
       name: 'Antigravity 1.x',
       description: 'Orijinal Antigravity uygulaması. Eski sürümü kullanıyorsanız bunu seçin.',
@@ -89,13 +90,6 @@ const tr = {
       vietnamese: 'Vietnamca',
       turkish: 'Türkçe',
     },
-    ideEdition: {
-      title: 'Antigravity Sürümü',
-      description: 'Kullandığınız Antigravity sürümünü seçin.',
-      placeholder: 'Sürüm seçin',
-      edition1x: 'Antigravity 1.x',
-      edition20: 'Antigravity IDE',
-    },
     about: {
       title: 'Hakkında',
       description: 'Uygulama bilgileri.',
@@ -120,6 +114,20 @@ const tr = {
       auto_refresh_desc: 'Tüm hesaplar için kota bilgilerini periyodik olarak yenile',
       auto_sync: 'Mevcut Hesabı Otomatik Eşitle',
       auto_sync_desc: 'Aktif hesap bilgilerini periyodik olarak eşitle',
+      antigravity_executable: 'Antigravity çalıştırılabilir dosyası',
+      antigravity_executable_desc:
+        'Portable mode verilerini bulmak ve Antigravity uygulamasını başlatmak için isteğe bağlı yol.',
+      antigravity_executable_placeholder: 'Örnek: C:\\Program Files\\Antigravity\\Antigravity.exe',
+      antigravity_ide_executable: 'Antigravity IDE çalıştırılabilir dosyası',
+      antigravity_ide_executable_desc:
+        'İsteğe bağlı Antigravity IDE yolu. Ayarlandıktan sonra Classic hesap geçişlerinde bu yoldaki süreçler sonlandırılmaya karşı korunur.',
+      antigravity_ide_executable_placeholder:
+        'Örnek: C:\\Program Files\\Antigravity IDE\\Antigravity IDE.exe',
+      antigravity_args: 'Antigravity başlatma argümanları',
+      antigravity_args_desc:
+        'Antigravity başlatılırken iletilecek isteğe bağlı argümanlar, örneğin --user-data-dir.',
+      antigravity_args_placeholder: 'Örnek: --user-data-dir D:\\AntigravityProfile',
+      detect_antigravity_args: 'Algıla',
     },
     startup: {
       title: 'Başlangıç',
@@ -278,7 +286,7 @@ const tr = {
     autoSwitch: 'Otomatik Değiştir',
     providerGroupings: 'Sağlayıcı Grupları',
     addAccount: 'Hesap Ekle',
-    syncFromIDE: "IDE'den Eşitle",
+    syncFromIde: "IDE'den Eşitle",
     checkQuota: 'Kotayı Şimdi Kontrol Et',
     polling: 'Sorgulama tetiklendi',
     globalQuota: 'Genel Kota',

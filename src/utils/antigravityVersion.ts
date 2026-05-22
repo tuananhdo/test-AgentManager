@@ -2,17 +2,22 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { getAntigravityExecutablePath } from './paths';
+import type { AntigravityAppTarget } from '../types/account';
+import { resolveAntigravityAppTarget } from '../types/account';
 
 export interface AntigravityVersion {
   shortVersion: string;
   bundleVersion: string;
 }
 
-let cachedVersion: AntigravityVersion | null = null;
-let cachedError: Error | null = null;
+const cachedVersions = new Map<AntigravityAppTarget, AntigravityVersion>();
+const cachedErrors = new Map<AntigravityAppTarget, Error>();
 
-function cacheAndReturn(version: AntigravityVersion): AntigravityVersion {
-  cachedVersion = version;
+function cacheAndReturn(
+  target: AntigravityAppTarget,
+  version: AntigravityVersion,
+): AntigravityVersion {
+  cachedVersions.set(target, version);
   return version;
 }
 
@@ -55,16 +60,19 @@ function parseVersionString(version: string | null): string {
   return trimmed;
 }
 
-export function getAntigravityVersion(): AntigravityVersion {
+export function getAntigravityVersion(target?: AntigravityAppTarget | null): AntigravityVersion {
+  const resolvedTarget = resolveAntigravityAppTarget(target);
+  const cachedVersion = cachedVersions.get(resolvedTarget);
   if (cachedVersion) {
     return cachedVersion;
   }
+  const cachedError = cachedErrors.get(resolvedTarget);
   if (cachedError) {
     throw cachedError;
   }
 
   try {
-    const execPath = getAntigravityExecutablePath();
+    const execPath = getAntigravityExecutablePath(resolvedTarget);
     if (!execPath) {
       throw new Error('Unable to locate Antigravity executable');
     }
@@ -79,14 +87,14 @@ export function getAntigravityVersion(): AntigravityVersion {
         }).trim();
 
         const parsed = parseVersionString(version);
-        return cacheAndReturn({
+        return cacheAndReturn(resolvedTarget, {
           shortVersion: parsed,
           bundleVersion: parsed,
         });
       } catch (error) {
         const fallback = readPackageJsonVersion(execPath);
         if (fallback) {
-          return cacheAndReturn(fallback);
+          return cacheAndReturn(resolvedTarget, fallback);
         }
         throw error;
       }
@@ -119,7 +127,7 @@ export function getAntigravityVersion(): AntigravityVersion {
         readPlistValue(content, 'CFBundleVersion') || shortVersion,
       );
 
-      return cacheAndReturn({
+      return cacheAndReturn(resolvedTarget, {
         shortVersion,
         bundleVersion,
       });
@@ -132,14 +140,14 @@ export function getAntigravityVersion(): AntigravityVersion {
           stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
         const parsed = parseVersionString(output);
-        return cacheAndReturn({
+        return cacheAndReturn(resolvedTarget, {
           shortVersion: parsed,
           bundleVersion: parsed,
         });
       } catch {
         const fallback = readPackageJsonVersion(execPath);
         if (fallback) {
-          return cacheAndReturn(fallback);
+          return cacheAndReturn(resolvedTarget, fallback);
         }
       }
     }
@@ -148,7 +156,7 @@ export function getAntigravityVersion(): AntigravityVersion {
   } catch (error) {
     const normalized =
       error instanceof Error ? error : new Error('Unable to determine Antigravity version');
-    cachedError = normalized;
+    cachedErrors.set(resolvedTarget, normalized);
     throw normalized;
   }
 }
@@ -178,4 +186,8 @@ export function compareVersion(v1: string, v2: string): number {
 
 export function isNewVersion(version: AntigravityVersion): boolean {
   return compareVersion(version.shortVersion, '1.16.5') >= 0;
+}
+
+export function isCredentialStoreVersion(version: AntigravityVersion): boolean {
+  return compareVersion(version.shortVersion, '2.0.0') >= 0;
 }

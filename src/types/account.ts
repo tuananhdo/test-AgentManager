@@ -54,6 +54,15 @@ export interface AccountInfo {
 
 // Zod Schemas for validation
 
+export const AntigravityAppTargetSchema = z.enum(['classic', 'ide']);
+export type AntigravityAppTarget = z.infer<typeof AntigravityAppTargetSchema>;
+
+export function resolveAntigravityAppTarget(
+  target?: AntigravityAppTarget | null,
+): AntigravityAppTarget {
+  return target === 'ide' ? 'ide' : 'classic';
+}
+
 export const DeviceProfileSchema = z.object({
   machineId: z.string(),
   macMachineId: z.string(),

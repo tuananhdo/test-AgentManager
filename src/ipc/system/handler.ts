@@ -1,8 +1,9 @@
 import { os } from '@orpc/server';
 import { z } from 'zod';
 import { networkInterfaces } from 'os';
-import { shell } from 'electron';
-import { getAgentDir } from '../../utils/paths';
+import { dialog, shell } from 'electron';
+import { getAgentDir, getAntigravityLaunchArgsFromRunningProcess } from '../../utils/paths';
+import { AntigravityAppTargetSchema, resolveAntigravityAppTarget } from '../../types/account';
 
 // Schema for IP info
 const IpInfoSchema = z.object({
@@ -69,4 +70,30 @@ export const systemHandler = os.router({
     const logDir = getAgentDir();
     await shell.openPath(logDir);
   }),
+
+  selectAntigravityExecutable: os
+    .input(z.object({ target: AntigravityAppTargetSchema.optional() }).optional())
+    .output(z.string().nullable())
+    .handler(async ({ input }) => {
+      const target = resolveAntigravityAppTarget(input?.target);
+      const appName = target === 'ide' ? 'Antigravity IDE' : 'Antigravity';
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [
+          {
+            name: `${appName} executable`,
+            extensions: process.platform === 'win32' ? ['exe'] : ['*'],
+          },
+        ],
+      });
+
+      return result.canceled ? null : result.filePaths[0] || null;
+    }),
+
+  getAntigravityArgs: os
+    .input(z.object({ target: AntigravityAppTargetSchema.optional() }).optional())
+    .output(z.array(z.string()))
+    .handler(async ({ input }) => {
+      return getAntigravityLaunchArgsFromRunningProcess(input?.target);
+    }),
 });

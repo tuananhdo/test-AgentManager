@@ -64,20 +64,25 @@ i18n
           },
           editionSelection: {
             title: 'Choose Your Antigravity Edition',
-            description: 'Select which version of Antigravity you are using. This helps the Manager connect to the correct application.',
+            description:
+              'Select which version of Antigravity you are using. This helps the Manager connect to the correct application.',
             edition1x: {
               name: 'Antigravity 1.x',
-              description: 'The original Antigravity application. Choose this if you are using the legacy version.',
+              description:
+                'The original Antigravity application. Choose this if you are using the legacy version.',
             },
             edition20: {
               name: 'Antigravity IDE',
-              description: 'The new Antigravity IDE (2.0). Choose this if you are using the latest IDE version.',
+              description:
+                'The new Antigravity IDE (2.0). Choose this if you are using the latest IDE version.',
             },
             confirm: 'Continue',
           },
           account: {
             current: 'Current',
             lastUsed: 'Last used {{time}}',
+            switchToClassic: 'Switch to Antigravity (Classic)',
+            switchToIde: 'Switch to Antigravity IDE',
           },
           home: {
             title: 'Accounts',
@@ -109,13 +114,6 @@ i18n
               vietnamese: 'Vietnamese',
               turkish: 'Turkish',
             },
-            ideEdition: {
-              title: 'Antigravity Edition',
-              description: 'Select which version of Antigravity you are using.',
-              placeholder: 'Select edition',
-              edition1x: 'Antigravity 1.x',
-              edition20: 'Antigravity IDE',
-            },
             about: {
               title: 'About',
               description: 'Application information.',
@@ -140,6 +138,21 @@ i18n
               auto_refresh_desc: 'Periodically refresh quota info for all accounts',
               auto_sync: 'Auto Sync Current Account',
               auto_sync_desc: 'Periodically sync active account information',
+              antigravity_executable: 'Antigravity executable',
+              antigravity_executable_desc:
+                'Optional path used to find portable mode data and launch Antigravity.',
+              antigravity_executable_placeholder:
+                'Example: C:\\Program Files\\Antigravity\\Antigravity.exe',
+              antigravity_ide_executable: 'Antigravity IDE executable',
+              antigravity_ide_executable_desc:
+                'Optional Antigravity IDE executable path. When switching Classic accounts, processes at this path are protected from termination.',
+              antigravity_ide_executable_placeholder:
+                'Example: C:\\Program Files\\Antigravity IDE\\Antigravity IDE.exe',
+              antigravity_args: 'Antigravity launch arguments',
+              antigravity_args_desc:
+                'Optional arguments passed when launching Antigravity, such as --user-data-dir.',
+              antigravity_args_placeholder: 'Example: --user-data-dir D:\\AntigravityProfile',
+              detect_antigravity_args: 'Detect',
             },
             startup: {
               title: 'Startup',
@@ -299,7 +312,7 @@ i18n
             autoSwitch: 'Auto-Switch',
             providerGroupings: 'Provider Groupings',
             addAccount: 'Add Account',
-            syncFromIDE: 'Sync from IDE',
+            syncFromIde: 'Sync from IDE',
             checkQuota: 'Check Quota Now',
             polling: 'Polling triggered',
             globalQuota: 'Global Quota',
@@ -572,13 +585,16 @@ i18n
             },
             edition20: {
               name: 'Antigravity IDE',
-              description: '新版 Antigravity IDE (2.0)。如果您使用的是最新的 IDE 版本，请选择此项。',
+              description:
+                '新版 Antigravity IDE (2.0)。如果您使用的是最新的 IDE 版本，请选择此项。',
             },
             confirm: '继续',
           },
           account: {
             current: '当前',
             lastUsed: '上次使用 {{time}}',
+            switchToClassic: '切换到 Antigravity（经典版）',
+            switchToIde: '切换到 Antigravity IDE',
           },
           home: {
             title: '账号列表',
@@ -610,13 +626,6 @@ i18n
               vietnamese: '越南语',
               turkish: '土耳其语',
             },
-            ideEdition: {
-              title: 'Antigravity 版本',
-              description: '选择您正在使用的 Antigravity 版本。',
-              placeholder: '选择版本',
-              edition1x: 'Antigravity 1.x',
-              edition20: 'Antigravity IDE',
-            },
             about: {
               title: '关于',
               description: '应用信息。',
@@ -641,6 +650,19 @@ i18n
               auto_refresh_desc: '定期自动刷新所有账号的配额信息',
               auto_sync: '自动获取当前账号',
               auto_sync_desc: '定期自动同步当前活跃账号信息',
+              antigravity_executable: 'Antigravity 可执行文件',
+              antigravity_executable_desc: '可选路径，用于发现便携模式数据目录并启动 Antigravity。',
+              antigravity_executable_placeholder:
+                '例如：C:\\Program Files\\Antigravity\\Antigravity.exe',
+              antigravity_ide_executable: 'Antigravity IDE 可执行文件',
+              antigravity_ide_executable_desc:
+                '可选的 Antigravity IDE 可执行文件路径。切换经典版账号时，会保护此路径下的进程不被终止。',
+              antigravity_ide_executable_placeholder:
+                '例如：C:\\Program Files\\Antigravity IDE\\Antigravity IDE.exe',
+              antigravity_args: 'Antigravity 启动参数',
+              antigravity_args_desc: '启动 Antigravity 时传入的可选参数，例如 --user-data-dir。',
+              antigravity_args_placeholder: '例如：--user-data-dir D:\\AntigravityProfile',
+              detect_antigravity_args: '检测',
             },
             startup: {
               title: '启动',
@@ -796,7 +818,7 @@ i18n
             autoSwitch: '自动切换',
             providerGroupings: '提供商分组',
             addAccount: '添加账号',
-            syncFromIDE: '从 IDE 同步',
+            syncFromIde: '从 IDE 同步',
             checkQuota: '立即检查配额',
             polling: '已触发轮询',
             globalQuota: '全局配额',
@@ -1054,20 +1076,25 @@ i18n
           },
           editionSelection: {
             title: 'Выберите версию Antigravity',
-            description: 'Выберите, какую версию Antigravity вы используете. Это поможет менеджеру подключиться к правильному приложению.',
+            description:
+              'Выберите, какую версию Antigravity вы используете. Это поможет менеджеру подключиться к правильному приложению.',
             edition1x: {
               name: 'Antigravity 1.x',
-              description: 'Оригинальное приложение Antigravity. Выберите это, если вы используете устаревшую версию.',
+              description:
+                'Оригинальное приложение Antigravity. Выберите это, если вы используете устаревшую версию.',
             },
             edition20: {
               name: 'Antigravity IDE',
-              description: 'Новый Antigravity IDE (2.0). Выберите это, если вы используете последнюю версию IDE.',
+              description:
+                'Новый Antigravity IDE (2.0). Выберите это, если вы используете последнюю версию IDE.',
             },
             confirm: 'Продолжить',
           },
           account: {
             current: 'Текущий',
             lastUsed: 'Последнее использование {{time}}',
+            switchToClassic: 'Переключиться на Antigravity (Classic)',
+            switchToIde: 'Переключиться на Antigravity IDE',
           },
           home: {
             title: 'Аккаунты',
@@ -1100,13 +1127,6 @@ i18n
               vietnamese: 'Вьетнамский',
               turkish: 'Турецкий',
             },
-            ideEdition: {
-              title: 'Версия Antigravity',
-              description: 'Выберите, какую версию Antigravity вы используете.',
-              placeholder: 'Выберите версию',
-              edition1x: 'Antigravity 1.x',
-              edition20: 'Antigravity IDE',
-            },
             about: {
               title: 'О программе',
               description: 'Информация о приложении.',
@@ -1131,6 +1151,20 @@ i18n
               auto_refresh_desc: 'Периодически обновлять информацию о квотах для всех аккаунтов',
               auto_sync: 'Автосинхронизация текущего',
               auto_sync_desc: 'Периодически синхронизировать активный аккаунт',
+              antigravity_executable: 'Файл запуска Antigravity',
+              antigravity_executable_desc:
+                'Необязательный путь для поиска данных portable mode и запуска Antigravity.',
+              antigravity_executable_placeholder:
+                'Например: C:\\Program Files\\Antigravity\\Antigravity.exe',
+              antigravity_ide_executable: 'Файл запуска Antigravity IDE',
+              antigravity_ide_executable_desc:
+                'Необязательный путь к Antigravity IDE. При переключении аккаунтов Classic процессы по этому пути защищаются от завершения.',
+              antigravity_ide_executable_placeholder:
+                'Например: C:\\Program Files\\Antigravity IDE\\Antigravity IDE.exe',
+              antigravity_args: 'Аргументы запуска Antigravity',
+              antigravity_args_desc: 'Необязательные аргументы запуска, например --user-data-dir.',
+              antigravity_args_placeholder: 'Например: --user-data-dir D:\\AntigravityProfile',
+              detect_antigravity_args: 'Найти',
             },
             startup: {
               title: 'Автозагрузка',
@@ -1290,7 +1324,7 @@ i18n
             autoSwitch: 'Авто-переключение',
             providerGroupings: 'Группировка по провайдерам',
             addAccount: 'Добавить аккаунт',
-            syncFromIDE: 'Синхр. из IDE',
+            syncFromIde: 'Синхр. из IDE',
             checkQuota: 'Проверить квоту',
             polling: 'Опрос запущен',
             globalQuota: 'Глобальная квота',

@@ -12,8 +12,6 @@ import { z } from 'zod';
 import { isProcessRunning, closeAntigravity, startAntigravity } from './process/handler';
 import { systemHandler } from './system/handler';
 import { logger } from '../utils/logger';
-import { ConfigManager } from './config/manager';
-import type { IdeEdition } from '../types/config';
 
 // Log middleware setup
 const logMiddleware = os.middleware(async (opts: any) => {
@@ -29,11 +27,6 @@ const logMiddleware = os.middleware(async (opts: any) => {
   }
 });
 
-function getEdition(): IdeEdition | undefined {
-  const config = ConfigManager.getCachedConfig() || ConfigManager.loadConfig();
-  return config.ideEdition || undefined;
-}
-
 // Explicit Router Definition
 export const router = os.use(logMiddleware).router({
   ping: os.output(z.string()).handler(async () => 'pong'),
@@ -46,13 +39,13 @@ export const router = os.use(logMiddleware).router({
   // Inline process router to ensure structure
   proc: os.router({
     isProcessRunning: os.output(z.boolean()).handler(async () => {
-      return await isProcessRunning(getEdition());
+      return await isProcessRunning();
     }),
     closeAntigravity: os.output(z.void()).handler(async () => {
-      await closeAntigravity(getEdition());
+      await closeAntigravity();
     }),
     startAntigravity: os.output(z.void()).handler(async () => {
-      await startAntigravity(getEdition());
+      await startAntigravity();
     }),
   }),
 
