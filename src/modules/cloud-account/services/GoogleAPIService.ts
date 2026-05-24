@@ -850,32 +850,6 @@ export class GoogleAPIService {
   ): Promise<{ credits: number; expiryDate: string } | null> {
     try {
       const fetchOptions = this.getFetchOptions(proxyUrl);
-      const response = await fetch(URLS.FETCH_CREDITS, {
-        method: 'POST',
-        headers: buildInternalApiHeaders(accessToken),
-        body: JSON.stringify({}),
-        signal: createTimeoutSignal(REQUEST_TIMEOUT_MS),
-        ...fetchOptions,
-      });
-
-      if (response.ok) {
-        const data = (await response.json()) as Partial<{
-          credits: number | string;
-          remainingCredits: number | string;
-          expiryDate: string;
-          expirationDate: string;
-        }>;
-
-        return toAiCredits(data);
-      }
-
-      if (response.status !== 404) {
-        return null;
-      }
-
-      // `fetchCredits` has started returning 404 for some accounts. Reuse the
-      // internal `loadCodeAssist` payload, which also exposes paid tier credits.
-      logger.warn('[GoogleAPIService] fetchCredits returned 404, falling back to loadCodeAssist');
       const discoveryVersion = resolveLocalInstalledVersion() ?? FALLBACK_VERSION;
       const fallbackResponse = await fetch(URLS.DAILY_LOAD_PROJECT, {
         method: 'POST',
