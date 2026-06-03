@@ -5,6 +5,12 @@ const HIGH_QUOTA_PERCENTAGE = 80;
 const MEDIUM_QUOTA_PERCENTAGE = 20;
 
 export type QuotaStatus = 'high' | 'medium' | 'low';
+export type AccountSortKey =
+  | 'recently-used'
+  | 'quota-overall'
+  | 'quota-claude'
+  | 'quota-pro3'
+  | 'quota-flash';
 
 export interface ResetTimeLabelOptions {
   prefix: string;
@@ -91,27 +97,60 @@ export function formatResetTimeTitle(
   return `${resetTimeLabel}: ${resetDate.toLocaleString()}`;
 }
 
-export function getAccountSortValue(account: CloudAccount, sortKey: string): number {
-  if (!account.quota?.models) return 0;
-  const models = Object.values(account.quota.models);
-  if (models.length === 0) return 0;
+function getVisibleModelEntries(
+  account: CloudAccount,
+  modelVisibility: Record<string, boolean>,
+): Array<[string, NonNullable<CloudAccount['quota']>['models'][string]]> {
+  if (!account.quota?.models) return [];
+  return Object.entries(account.quota.models).filter(
+    ([modelName]) => modelVisibility[modelName] !== false,
+  );
+}
+
+function getAveragePercentage(
+  modelEntries: Array<[string, NonNullable<CloudAccount['quota']>['models'][string]]>,
+): number {
+  if (modelEntries.length === 0) {
+    return 0;
+  }
+
+  return modelEntries.reduce((sum, [, model]) => sum + model.percentage, 0) / modelEntries.length;
+}
+
+function modelMatchesText(modelName: string, displayName: string | undefined, pattern: RegExp) {
+  return pattern.test(modelName) || pattern.test(displayName || '');
+}
+
+export function getAccountSortValue(
+  account: CloudAccount,
+  sortKey: AccountSortKey,
+  modelVisibility: Record<string, boolean> = {},
+): number {
+  const visibleModelEntries = getVisibleModelEntries(account, modelVisibility);
+  if (visibleModelEntries.length === 0) {
+    return 0;
+  }
 
   switch (sortKey) {
     case 'quota-overall':
-      return models.reduce((sum, m) => sum + m.percentage, 0) / models.length;
+      return getAveragePercentage(visibleModelEntries);
     case 'quota-claude': {
-      const claude = models.filter((m) => m.percentage > 0);
-      return claude.length > 0
-        ? claude.reduce((sum, m) => sum + m.percentage, 0) / claude.length
-        : 0;
+      const claude = visibleModelEntries.filter(([modelName, model]) =>
+        modelMatchesText(modelName, model.display_name, /claude/i),
+      );
+      return getAveragePercentage(claude);
     }
     case 'quota-pro3': {
-      const pro3 = models.filter((m) => m.percentage > 0 && /pro/i.test(m.display_name || ''));
-      return pro3.length > 0 ? pro3.reduce((sum, m) => sum + m.percentage, 0) / pro3.length : 0;
+      const pro3 = visibleModelEntries.filter(([modelName, model]) =>
+        modelMatchesText(modelName, model.display_name, /pro/i),
+      );
+      return getAveragePercentage(pro3);
     }
     case 'quota-flash': {
-      const flash = models.filter((m) => m.percentage > 0 && /flash/i.test(m.display_name || ''));
-      return flash.length > 0 ? flash.reduce((sum, m) => sum + m.percentage, 0) / flash.length : 0;
+      const flash = visibleModelEntries.filter(([modelName, model]) =>
+        modelMatchesText(modelName, model.display_name, /flash/i),
+      );
+      return getAveragePercentage(flash);
     }
     default:
       return 0;

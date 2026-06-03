@@ -53,6 +53,7 @@ export const AppConfigSchema = z.object({
   account_sort: z
     .enum(['recently-used', 'quota-overall', 'quota-claude', 'quota-pro3', 'quota-flash'])
     .default('recently-used'),
+  account_tier_filter: z.array(z.string()).default([]),
   quota_alert_enabled: z.boolean().default(false),
   quota_alert_threshold: z.number().default(20),
   antigravity_executable: z.string().nullable().optional().default(null),
@@ -84,6 +85,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   provider_groupings_enabled: false, // Enable provider groupings UI
   grid_layout: 'auto' as const, // Account card grid layout
   account_sort: 'recently-used' as const,
+  account_tier_filter: [],
   quota_alert_enabled: false,
   quota_alert_threshold: 20,
   antigravity_executable: null,

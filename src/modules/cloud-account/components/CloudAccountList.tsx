@@ -18,6 +18,7 @@ import {
   CloudAccountCard,
   CompactCloudAccountCard,
 } from '@/modules/cloud-account/components/CloudAccountCard';
+import { AccountTierFilterDropdown } from '@/modules/cloud-account/components/AccountTierFilterDropdown';
 import { IdentityProfileDialog } from '@/modules/identity-profile/components/IdentityProfileDialog';
 import { CloudAccount } from '@/modules/cloud-account/types';
 import type { AntigravityAppTarget } from '@/modules/account/types';
@@ -75,16 +76,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { filter, flatMap, isEmpty, isNumber, size, sumBy } from 'lodash-es';
+import { isNumber } from 'lodash-es';
 import {
   clampQuotaPercentage,
   formatAiCreditsAmount,
-  getQuotaStatus,
-  roundQuotaPercentage,
-  getAccountSortValue,
+  type AccountSortKey,
   type QuotaStatus,
 } from '@/modules/cloud-account/utils/quota-display';
+import { ACCOUNT_TIER_UNKNOWN_KEY } from '@/modules/cloud-account/utils/account-tier-filter';
 import { shouldAutoSubmitGoogleAuthCode } from '@/modules/cloud-account/utils/googleAuthSubmission';
+import { useCloudAccountListView } from '@/modules/cloud-account/hooks/useCloudAccountListView';
 
 export type GridLayout = 'auto' | '2-col' | '3-col' | 'list' | 'compact';
 
@@ -143,9 +144,8 @@ export function CloudAccountList() {
     'quota-pro3',
     'quota-flash',
   ] as const;
-  type SortOption = (typeof sortOptions)[number];
-  const currentSort: SortOption = (config?.account_sort as SortOption) || 'recently-used';
-  const sortI18nKeys: Record<SortOption, string> = {
+  const currentSort: AccountSortKey = (config?.account_sort as AccountSortKey) || 'recently-used';
+  const sortI18nKeys: Record<AccountSortKey, string> = {
     'recently-used': 'cloud.sort.recentlyUsed',
     'quota-overall': 'cloud.sort.quotaOverall',
     'quota-claude': 'cloud.sort.quotaClaude',
@@ -153,56 +153,47 @@ export function CloudAccountList() {
     'quota-flash': 'cloud.sort.quotaFlash',
   };
 
-  const sortedAccounts = useMemo(() => {
-    if (!accounts || accounts.length === 0) return [];
+  const {
+    sortedAccounts,
+    tierOptions,
+    effectiveSelectedTierKeys,
+    effectiveSelectedTierKeySet,
+    hasActiveTierFilter,
+    visibleAccountIds,
+    totalAccounts,
+    activeAccounts,
+    rateLimitedAccounts,
+    overallQuotaPercentage,
+    effectiveQuotaStatus,
+  } = useCloudAccountListView(accounts, config, currentSort);
 
-    const activeAccounts = accounts.filter((a) => a.is_active);
-    const otherAccounts = accounts.filter((a) => !a.is_active);
-
-    const sortedActive = [...activeAccounts].sort((a, b) => {
-      return (b.last_used ?? 0) - (a.last_used ?? 0);
-    });
-
-    const sortedOthers = [...otherAccounts].sort((a, b) => {
-      if (currentSort === 'recently-used') {
-        return (b.last_used ?? 0) - (a.last_used ?? 0);
-      }
-      return getAccountSortValue(b, currentSort) - getAccountSortValue(a, currentSort);
-    });
-
-    return [...sortedActive, ...sortedOthers];
-  }, [accounts, currentSort]);
-
-  // Calculate global quota across all accounts
-  const overallQuotaPercentage = useMemo(() => {
-    if (!accounts || accounts.length === 0) {
-      return null;
-    }
-
-    const visibilitySettings = config?.model_visibility ?? {};
-    const visibleModelInfos = flatMap(accounts, (account) => {
-      if (!account.quota?.models) {
-        return [];
+  const getTierOptionLabel = useCallback(
+    (key: string, label: string) => {
+      if (key === ACCOUNT_TIER_UNKNOWN_KEY) {
+        return t('cloud.tierFilter.unknown');
       }
 
-      return Object.entries(account.quota.models)
-        .filter(([modelName]) => visibilitySettings[modelName] !== false)
-        .map(([, info]) => info);
-    });
+      return label;
+    },
+    [t],
+  );
 
-    if (isEmpty(visibleModelInfos)) {
-      return null;
+  const tierFilterButtonLabel = useMemo(() => {
+    if (!hasActiveTierFilter) {
+      return t('cloud.tierFilter.all');
     }
 
-    const averagePercentage =
-      sumBy(visibleModelInfos, (modelInfo) => modelInfo.percentage) / visibleModelInfos.length;
+    if (effectiveSelectedTierKeys.length === 1) {
+      const selectedOption = tierOptions.find(
+        (option) => option.key === effectiveSelectedTierKeys[0],
+      );
+      return selectedOption
+        ? getTierOptionLabel(selectedOption.key, selectedOption.label)
+        : t('cloud.tierFilter.all');
+    }
 
-    return roundQuotaPercentage(averagePercentage);
-  }, [accounts, config?.model_visibility]);
-
-  const overallQuotaStatus =
-    overallQuotaPercentage === null ? null : getQuotaStatus(overallQuotaPercentage);
-  const effectiveQuotaStatus: QuotaStatus = overallQuotaStatus ?? 'low';
+    return t('cloud.tierFilter.selectedCount', { count: effectiveSelectedTierKeys.length });
+  }, [effectiveSelectedTierKeys, getTierOptionLabel, hasActiveTierFilter, t, tierOptions]);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [authCode, setAuthCode] = useState('');
@@ -218,12 +209,6 @@ export function CloudAccountList() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportMutation = useExportCloudAccounts();
   const importMutation = useImportCloudAccounts();
-  const totalAccounts = size(accounts);
-  const activeAccounts = filter(accounts, (account) => account.is_active).length;
-  const rateLimitedAccounts = filter(
-    accounts,
-    (account) => account.status === 'rate_limited',
-  ).length;
 
   const submitAuthCode = useCallback(
     (incomingAuthCode?: string) => {
@@ -575,12 +560,52 @@ export function CloudAccountList() {
     });
   };
 
+  useEffect(() => {
+    const visibleAccountIdSet = new Set(visibleAccountIds);
+    setSelectedIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => visibleAccountIdSet.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [visibleAccountIds]);
+
   const toggleSelectAllAccounts = () => {
-    if (selectedIds.size === accounts?.length) {
+    const allVisibleSelected =
+      visibleAccountIds.length > 0 && visibleAccountIds.every((id) => selectedIds.has(id));
+
+    if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(accounts?.map((a) => a.id) || []));
+      setSelectedIds(new Set(visibleAccountIds));
     }
+  };
+
+  const toggleTierFilter = async (tierKey: string, checked: boolean) => {
+    if (!config) {
+      return;
+    }
+
+    const nextSelectedKeys = new Set(effectiveSelectedTierKeys);
+    if (checked) {
+      nextSelectedKeys.add(tierKey);
+    } else {
+      nextSelectedKeys.delete(tierKey);
+    }
+
+    await saveConfig({
+      ...config,
+      account_tier_filter: Array.from(nextSelectedKeys),
+    });
+  };
+
+  const resetTierFilter = async () => {
+    if (!config) {
+      return;
+    }
+
+    await saveConfig({
+      ...config,
+      account_tier_filter: [],
+    });
   };
 
   const refreshSelectedAccounts = async () => {
@@ -748,7 +773,7 @@ export function CloudAccountList() {
           className="cursor-pointer"
         >
           <CheckSquare
-            className={`mr-2 h-4 w-4 ${selectedIds.size > 0 && selectedIds.size === accounts?.length ? 'text-primary fill-primary/20' : ''}`}
+            className={`mr-2 h-4 w-4 ${selectedIds.size > 0 && selectedIds.size === sortedAccounts.length ? 'text-primary fill-primary/20' : ''}`}
           />
           {t('cloud.batch.selectAll')}
         </Button>
@@ -974,7 +999,22 @@ export function CloudAccountList() {
           </DialogContent>
         </Dialog>
 
-        {/* Sort + Layout Selector */}
+        {/* Tier Filter + Sort + Layout Selector */}
+        <AccountTierFilterDropdown
+          options={tierOptions}
+          selectedKeys={effectiveSelectedTierKeySet}
+          hasActiveFilter={hasActiveTierFilter}
+          triggerLabel={tierFilterButtonLabel}
+          resetLabel={t('cloud.tierFilter.reset')}
+          getOptionLabel={(option) => getTierOptionLabel(option.key, option.label)}
+          onReset={() => {
+            resetTierFilter();
+          }}
+          onToggle={(tierKey, checked) => {
+            toggleTierFilter(tierKey, checked);
+          }}
+        />
+
         <div className="flex items-center gap-1 rounded-md border p-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1118,16 +1158,28 @@ export function CloudAccountList() {
               isSwitching={
                 switchMutation.isPending && switchMutation.variables?.accountId === account.id
               }
-              switchingTarget={
-                switchMutation.isPending && switchMutation.variables?.accountId === account.id
-                  ? switchMutation.variables?.appTarget
-                  : undefined
-              }
             />
           ),
         )}
 
-        {sortedAccounts.length === 0 && (
+        {sortedAccounts.length === 0 && hasActiveTierFilter && (accounts?.length ?? 0) > 0 && (
+          <div className="text-muted-foreground bg-muted/20 col-span-full rounded-lg border border-dashed py-14 text-center">
+            <Cloud className="mx-auto mb-3 h-10 w-10 opacity-40" />
+            <div className="text-sm">{t('cloud.list.noFilteredAccounts')}</div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                resetTierFilter();
+              }}
+            >
+              {t('cloud.tierFilter.reset')}
+            </Button>
+          </div>
+        )}
+
+        {sortedAccounts.length === 0 && (!hasActiveTierFilter || (accounts?.length ?? 0) === 0) && (
           <div className="text-muted-foreground bg-muted/20 col-span-full rounded-lg border border-dashed py-14 text-center">
             <Cloud className="mx-auto mb-3 h-10 w-10 opacity-40" />
             <div className="text-sm">{t('cloud.list.noAccounts')}</div>

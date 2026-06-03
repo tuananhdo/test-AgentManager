@@ -390,6 +390,7 @@ const tr = {
     },
     list: {
       noAccounts: 'Henüz bulut hesabı eklenmedi.',
+      noFilteredAccounts: 'Seçilen katmanlarla eşleşen hesap yok.',
     },
     error: {
       loadFailed: 'Bulut hesapları yüklenemedi.',
@@ -443,6 +444,12 @@ const tr = {
       selectAll: 'Tümünü Seç',
       clear: 'Seçimi Temizle',
       confirmDelete: '{{count}} hesabı silmek istediğinizden emin misiniz?',
+    },
+    tierFilter: {
+      all: 'Tüm katmanlar',
+      reset: 'Tümüne sıfırla',
+      selectedCount: '{{count}} katman',
+      unknown: 'Bilinmiyor',
     },
     sort: {
       recentlyUsed: 'Son Kullanılanlar',

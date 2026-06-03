@@ -388,6 +388,7 @@ const vi = {
     },
     list: {
       noAccounts: 'Chưa có tài khoản cloud nào được thêm.',
+      noFilteredAccounts: 'Không có tài khoản nào khớp với tier đã chọn.',
     },
     error: {
       loadFailed: 'Không thể tải danh sách tài khoản cloud.',
@@ -441,6 +442,12 @@ const vi = {
       selectAll: 'Chọn tất cả',
       clear: 'Bỏ chọn',
       confirmDelete: 'Bạn có chắc chắn muốn xóa {{count}} tài khoản không?',
+    },
+    tierFilter: {
+      all: 'Tất cả tier',
+      reset: 'Đặt lại tất cả',
+      selectedCount: '{{count}} tier',
+      unknown: 'Không rõ',
     },
     sort: {
       recentlyUsed: 'Dùng gần đây',

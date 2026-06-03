@@ -51,6 +51,7 @@ import { useSetAccountProxy } from '@/modules/cloud-account/hooks/useCloudAccoun
 import { isValidProxyUrl } from '@/shared/utils/url';
 import { getValidationBlockedStatusLabel } from '@/modules/cloud-account/utils/accountValidationStatus';
 import type { AntigravityAppTarget } from '@/modules/account/types';
+import { AccountTierBadge } from '@/modules/cloud-account/components/AccountTierBadge';
 
 type ModelQuotaEntry = [string, CloudQuotaModelInfo];
 
@@ -171,7 +172,6 @@ interface CloudAccountCardProps {
   isRefreshing?: boolean;
   isDeleting?: boolean;
   isSwitching?: boolean;
-  switchingTarget?: AntigravityAppTarget;
 }
 
 export function CloudAccountCard({
@@ -185,7 +185,6 @@ export function CloudAccountCard({
   isRefreshing,
   isDeleting,
   isSwitching,
-  switchingTarget,
 }: CloudAccountCardProps) {
   const { t } = useTranslation();
   const { config, saveConfig } = useAppConfig();
@@ -525,6 +524,7 @@ export function CloudAccountCard({
             >
               {account.provider.toUpperCase()}
             </Badge>
+            <AccountTierBadge account={account} unknownLabel={t('cloud.tierFilter.unknown')} />
 
             {validationBlockedStatusLabel && (
               <span className="text-destructive text-xs font-medium">
@@ -686,7 +686,6 @@ export function CompactCloudAccountCard({
   isRefreshing,
   isDeleting,
   isSwitching,
-  switchingTarget,
 }: CompactCloudAccountCardProps) {
   const { t } = useTranslation();
   const { config } = useAppConfig();
@@ -747,6 +746,11 @@ export function CompactCloudAccountCard({
           >
             {account.provider.toUpperCase()}
           </Badge>
+          <AccountTierBadge
+            account={account}
+            unknownLabel={t('cloud.tierFilter.unknown')}
+            className="h-4 max-w-24 px-1 text-[9px]"
+          />
         </div>
 
         <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">

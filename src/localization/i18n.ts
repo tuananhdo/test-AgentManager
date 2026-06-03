@@ -415,6 +415,7 @@ i18n
             },
             list: {
               noAccounts: 'No cloud accounts added yet.',
+              noFilteredAccounts: 'No accounts match the selected tiers.',
             },
             error: {
               loadFailed: 'Failed to load cloud accounts.',
@@ -468,6 +469,12 @@ i18n
               selectAll: 'Select All',
               clear: 'Clear Selection',
               confirmDelete: 'Are you sure you want to delete {{count}} accounts?',
+            },
+            tierFilter: {
+              all: 'All tiers',
+              reset: 'Reset to all',
+              selectedCount: '{{count}} tiers',
+              unknown: 'Unknown',
             },
             sort: {
               recentlyUsed: 'Recently Used',
@@ -932,6 +939,7 @@ i18n
             },
             list: {
               noAccounts: '暂无云账号。',
+              noFilteredAccounts: '没有账号匹配所选套餐。',
             },
             error: {
               loadFailed: '加载云账号失败。',
@@ -985,6 +993,12 @@ i18n
               selectAll: '全选',
               clear: '取消选择',
               confirmDelete: '确定要删除选中的 {{count}} 个账号吗？',
+            },
+            tierFilter: {
+              all: '全部套餐',
+              reset: '重置为全部',
+              selectedCount: '{{count}} 个套餐',
+              unknown: '未知',
             },
             sort: {
               recentlyUsed: '最近使用',
@@ -1454,6 +1468,7 @@ i18n
             },
             list: {
               noAccounts: 'Нет добавленных облачных аккаунтов.',
+              noFilteredAccounts: 'Нет аккаунтов для выбранных уровней.',
             },
             error: {
               loadFailed: 'Не удалось загрузить аккаунты.',
@@ -1507,6 +1522,12 @@ i18n
               selectAll: 'Выбрать все',
               clear: 'Снять выделение',
               confirmDelete: 'Вы уверены, что хотите удалить {{count}} аккаунтов?',
+            },
+            tierFilter: {
+              all: 'Все уровни',
+              reset: 'Сбросить',
+              selectedCount: '{{count}} уровня',
+              unknown: 'Неизвестно',
             },
             sort: {
               recentlyUsed: 'Недавние',
