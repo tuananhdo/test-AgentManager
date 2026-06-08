@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { compare, coerce, parse } from 'semver';
 import { getAntigravityExecutablePath } from '@/shared/platform/paths';
 import type { AntigravityAppTarget } from '@/modules/account/types';
 import { resolveAntigravityAppTarget } from '@/modules/account/types';
@@ -162,26 +163,20 @@ export function getAntigravityVersion(target?: AntigravityAppTarget | null): Ant
 }
 
 export function compareVersion(v1: string, v2: string): number {
-  const parts1 = v1
-    .split('.')
-    .map((part) => Number.parseInt(part, 10))
-    .filter((value) => !Number.isNaN(value));
-  const parts2 = v2
-    .split('.')
-    .map((part) => Number.parseInt(part, 10))
-    .filter((value) => !Number.isNaN(value));
-  const length = Math.max(parts1.length, parts2.length);
-  for (let i = 0; i < length; i += 1) {
-    const left = parts1[i] ?? 0;
-    const right = parts2[i] ?? 0;
-    if (left > right) {
-      return 1;
-    }
-    if (left < right) {
-      return -1;
-    }
+  const parsedV1 = parse(v1.trim()) ?? coerce(v1);
+  const parsedV2 = parse(v2.trim()) ?? coerce(v2);
+
+  if (!parsedV1 && !parsedV2) {
+    return 0;
   }
-  return 0;
+  if (!parsedV1) {
+    return -1;
+  }
+  if (!parsedV2) {
+    return 1;
+  }
+
+  return compare(parsedV1, parsedV2);
 }
 
 export function isNewVersion(version: AntigravityVersion): boolean {
