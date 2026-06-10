@@ -31,6 +31,22 @@ const en = {
     details: 'Details',
     openLogs: 'Open Log Directory',
   },
+  update: {
+    title: 'Updates',
+    checking: 'Checking...',
+    checkNow: 'Check for Updates',
+    checkFailed: 'Unable to check for updates',
+    upToDate: "You're up to date.",
+    unsupported: 'Automatic update checks are not available on this platform.',
+    available: {
+      title: 'Update available',
+      description: 'Version {{version}} is available on GitHub.',
+      download: 'Download',
+      dismiss: 'Dismiss',
+      macosUnsignedNote:
+        'This macOS build is not officially signed. If macOS blocks the app, follow the manual signing steps in the GitHub README or related issues.',
+    },
+  },
   error: {
     generic: 'An unexpected error occurred.',
     detailsTitle: 'Error details',
@@ -111,6 +127,7 @@ const en = {
       russian: 'Russian',
       vietnamese: 'Vietnamese',
       turkish: 'Turkish',
+      french: 'French',
     },
     about: {
       title: 'About',

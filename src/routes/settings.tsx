@@ -14,12 +14,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { getAppVersion, getPlatform } from '@/modules/app-shell/actions/app';
+import { checkForUpdates, getAppVersion, getPlatform } from '@/modules/app-shell/actions/app';
 import { useTranslation } from 'react-i18next';
 import { setAppLanguage } from '@/modules/app-shell/actions/language';
 import { useAppConfig } from '@/modules/config/hooks/useAppConfig';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, FolderOpen, X } from 'lucide-react';
+import { Loader2, FolderOpen, RefreshCw, X } from 'lucide-react';
 import { ModelVisibilitySettings } from '@/modules/config/components/ModelVisibilitySettings';
 import { useEffect, useState } from 'react';
 import { ProxyConfig } from '@/modules/config/types';
@@ -76,12 +76,12 @@ function SettingsPage() {
   const [antigravityIdeExecutable, setAntigravityIdeExecutable] = useState('');
   const [antigravityArgs, setAntigravityArgs] = useState('');
   const [antigravityIdeArgs, setAntigravityIdeArgs] = useState('');
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const clarityAvailable = isClarityAvailable();
 
   // Sync config to local state when loaded
   useEffect(() => {
     if (config) {
-      // eslint-disable-next-line
       setProxyConfig(config.proxy);
       setAntigravityExecutable(config.antigravity_executable || '');
       setAntigravityIdeExecutable(config.antigravity_ide_executable || '');
@@ -103,6 +103,7 @@ function SettingsPage() {
   const isAutoStartSupported =
     platform === 'win32' || platform === 'darwin' || platform === 'linux';
   const isMac = platform === 'darwin';
+  const supportsManualUpdateCheck = platform === 'darwin' || platform === 'linux';
 
   const handleLanguageChange = (value: string) => {
     setAppLanguage(value, i18n);
@@ -198,6 +199,36 @@ function SettingsPage() {
     }
   };
 
+  const handleCheckForUpdates = async () => {
+    setIsCheckingUpdates(true);
+    try {
+      const result = await checkForUpdates();
+      if (result.status === 'up-to-date') {
+        toast({
+          title: t('update.upToDate'),
+        });
+      } else if (result.status === 'unsupported') {
+        toast({
+          title: t('update.unsupported'),
+        });
+      } else if (result.status === 'error') {
+        toast({
+          title: t('update.checkFailed'),
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('update.checkFailed'),
+        description: error instanceof Error ? error.message : t('common.unknown'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
+
   if (isLoading || !proxyConfig) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -263,6 +294,7 @@ function SettingsPage() {
                     <SelectItem value="ru">{t('settings.language.russian')}</SelectItem>
                     <SelectItem value="vi">{t('settings.language.vietnamese')}</SelectItem>
                     <SelectItem value="tr">{t('settings.language.turkish')}</SelectItem>
+                    <SelectItem value="fr">{t('settings.language.french')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -507,6 +539,25 @@ function SettingsPage() {
 
                 <div className="text-muted-foreground">{t('settings.license')}</div>
                 <div className="font-medium">CC BY-NC-SA 4.0</div>
+
+                {supportsManualUpdateCheck && (
+                  <>
+                    <div className="text-muted-foreground">{t('update.title')}</div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
+                      disabled={isCheckingUpdates}
+                      onClick={handleCheckForUpdates}
+                    >
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${isCheckingUpdates ? 'animate-spin' : ''}`}
+                      />
+                      {isCheckingUpdates ? t('update.checking') : t('update.checkNow')}
+                    </Button>
+                  </>
+                )}
 
                 <div className="text-muted-foreground">{t('action.openLogs')}</div>
                 <button

@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/shared/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { LOCAL_STORAGE_KEYS } from '@/shared/constants';
 import { ClarityBootstrap } from '@/components/shared/ClarityBootstrap';
+import { ManualUpdateNotification } from '@/modules/app-shell/components/ManualUpdateNotification';
 
 function AppContent() {
   const { i18n } = useTranslation();
@@ -39,6 +40,7 @@ root.render(
       <ThemeProvider storageKey={LOCAL_STORAGE_KEYS.THEME} defaultTheme="system">
         <ClarityBootstrap />
         <App />
+        <ManualUpdateNotification />
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>

@@ -31,6 +31,22 @@ const vi = {
     details: 'Chi tiết',
     openLogs: 'Mở thư mục log',
   },
+  update: {
+    title: 'Cập nhật',
+    checking: 'Đang kiểm tra...',
+    checkNow: 'Kiểm tra cập nhật',
+    checkFailed: 'Không thể kiểm tra cập nhật',
+    upToDate: 'Bạn đang dùng phiên bản mới nhất.',
+    unsupported: 'Nền tảng này không hỗ trợ kiểm tra cập nhật tự động.',
+    available: {
+      title: 'Có bản cập nhật',
+      description: 'Phiên bản {{version}} đã có trên GitHub.',
+      download: 'Tải xuống',
+      dismiss: 'Đóng',
+      macosUnsignedNote:
+        'Bản macOS này chưa được ký chính thức. Nếu macOS chặn ứng dụng, hãy làm theo các bước ký thủ công trong GitHub README hoặc các issue liên quan.',
+    },
+  },
   error: {
     generic: 'Đã xảy ra lỗi không mong đợi.',
     detailsTitle: 'Chi tiết lỗi',
@@ -110,6 +126,7 @@ const vi = {
       russian: 'Tiếng Nga',
       vietnamese: 'Tiếng Việt',
       turkish: 'Tiếng Thổ Nhĩ Kỳ',
+      french: 'Tiếng Pháp',
     },
     about: {
       title: 'Thông tin',

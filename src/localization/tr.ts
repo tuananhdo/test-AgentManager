@@ -31,6 +31,22 @@ const tr = {
     details: 'Ayrıntılar',
     openLogs: 'Log Klasörünü Aç',
   },
+  update: {
+    title: 'Güncellemeler',
+    checking: 'Kontrol ediliyor...',
+    checkNow: 'Güncellemeleri Kontrol Et',
+    checkFailed: 'Güncellemeler kontrol edilemedi',
+    upToDate: 'En güncel sürümü kullanıyorsunuz.',
+    unsupported: 'Bu platformda otomatik güncelleme kontrolü kullanılamaz.',
+    available: {
+      title: 'Güncelleme var',
+      description: '{{version}} sürümü GitHub üzerinde mevcut.',
+      download: 'İndir',
+      dismiss: 'Kapat',
+      macosUnsignedNote:
+        'Bu macOS derlemesi resmi olarak imzalanmamıştır. macOS uygulamayı engellerse GitHub README veya ilgili issue kayıtlarındaki elle imzalama adımlarını izleyin.',
+    },
+  },
   error: {
     generic: 'Beklenmeyen bir hata oluştu.',
     detailsTitle: 'Hata ayrıntıları',
@@ -110,6 +126,7 @@ const tr = {
       russian: 'Rusça',
       vietnamese: 'Vietnamca',
       turkish: 'Türkçe',
+      french: 'Fransızca',
     },
     about: {
       title: 'Hakkında',

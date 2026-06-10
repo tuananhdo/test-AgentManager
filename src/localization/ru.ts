@@ -22,6 +22,22 @@ const ru = {
     details: 'Подробности',
     openLogs: 'Открыть папку логов',
   },
+  update: {
+    title: 'Обновления',
+    checking: 'Проверка...',
+    checkNow: 'Проверить обновления',
+    checkFailed: 'Не удалось проверить обновления',
+    upToDate: 'У вас последняя версия.',
+    unsupported: 'Проверка обновлений недоступна на этой платформе.',
+    available: {
+      title: 'Доступно обновление',
+      description: 'Версия {{version}} доступна на GitHub.',
+      download: 'Скачать',
+      dismiss: 'Закрыть',
+      macosUnsignedNote:
+        'Эта сборка macOS официально не подписана. Если macOS блокирует приложение, следуйте шагам ручной подписи в GitHub README или связанных issues.',
+    },
+  },
   error: {
     generic: 'Произошла непредвиденная ошибка.',
     detailsTitle: 'Детали ошибки',
@@ -103,6 +119,7 @@ const ru = {
       russian: 'Русский',
       vietnamese: 'Вьетнамский',
       turkish: 'Турецкий',
+      french: 'Французский',
     },
     about: {
       title: 'О программе',

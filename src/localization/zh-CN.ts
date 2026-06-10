@@ -22,6 +22,22 @@ const zhCn = {
     details: '详情',
     openLogs: '打开日志目录',
   },
+  update: {
+    title: '更新',
+    checking: '正在检查...',
+    checkNow: '检查更新',
+    checkFailed: '无法检查更新',
+    upToDate: '当前已是最新版本。',
+    unsupported: '当前平台不支持自动更新检查。',
+    available: {
+      title: '发现新版本',
+      description: 'GitHub 上已有 {{version}} 版本。',
+      download: '下载',
+      dismiss: '关闭',
+      macosUnsignedNote:
+        'macOS 新版本未进行官方签名。如果系统阻止打开应用，请参考 GitHub README 或相关 issue 中的手动签名方式。',
+    },
+  },
   error: {
     generic: '发生未知错误。',
     detailsTitle: '错误详情',
@@ -97,6 +113,7 @@ const zhCn = {
       russian: '俄语',
       vietnamese: '越南语',
       turkish: '土耳其语',
+      french: '法语',
     },
     about: {
       title: '关于',
