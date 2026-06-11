@@ -75,6 +75,8 @@ const fr = {
       'Il manque un ID de projet Antigravity a ce compte. Cela peut arriver si le compte ne s est jamais connecte a l app Antigravity. Connectez-vous une fois dans Antigravity, puis revenez dans cet outil et reessayez.',
     antigravityDatabasePermissionDenied:
       'Le stockage de base de donnees Antigravity n est pas accessible en ecriture. Verifiez le dossier de donnees utilisateur Antigravity configure ou redemarrez Antigravity Manager apres avoir ouvert Antigravity une fois.',
+    cloudAccountLoginExpired:
+      'Les informations de connexion de ce compte cloud ont expire. Veuillez vous reconnecter.',
   },
   nav: {
     accounts: 'Comptes',

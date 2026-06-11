@@ -59,6 +59,7 @@ const zhCn = {
       '该账号缺少 Antigravity 项目 ID。可能是该账号没有登录过 Antigravity 应用导致，请先在 Antigravity 应用中登录一次，再回到本工具重试切换。',
     antigravityDatabasePermissionDenied:
       'Antigravity 数据库存储目录不可写。请检查配置的 Antigravity user-data 目录，或先打开一次 Antigravity 后重启 Antigravity 管理器。',
+    cloudAccountLoginExpired: '该邮箱的登录信息已过期，请重新登录。',
   },
   nav: {
     accounts: '账号',

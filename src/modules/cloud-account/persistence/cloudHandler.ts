@@ -25,6 +25,7 @@ import {
   isNewVersion,
 } from '@/modules/antigravity-runtime/utils/antigravityVersion';
 import { parseRow, parseRows } from '@/shared/persistence/database/sqlite';
+import { getAppErrorData } from '@/shared/errors/appError';
 import {
   configureDatabase,
   openDrizzleConnection,
@@ -39,8 +40,6 @@ const SQLITE_RETRY_DELAY_MS = 150;
 const SQLITE_MAX_RETRIES = 3;
 const DEVICE_PAYLOAD_SCHEMA_VERSION = 1;
 const ACTIVE_ACCOUNT_SETTING_PREFIX = 'active_cloud_account';
-const DATA_MIGRATION_ERROR_CODE = 'ERR_DATA_MIGRATION_FAILED';
-
 type DrizzleExecutor = Pick<
   BetterSQLite3Database<typeof drizzleSchema>,
   'insert' | 'update' | 'delete' | 'select'
@@ -61,7 +60,7 @@ function isSqliteBusyError(error: unknown): boolean {
 }
 
 function isDataMigrationError(error: unknown): boolean {
-  return error instanceof Error && error.message.startsWith(`${DATA_MIGRATION_ERROR_CODE}|`);
+  return getAppErrorData(error)?.appErrorCode === 'DATA_MIGRATION_FAILED';
 }
 
 function sleepSync(ms: number): void {

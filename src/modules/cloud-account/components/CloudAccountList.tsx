@@ -235,7 +235,12 @@ export function CloudAccountList() {
             description: t('cloud.toast.refreshCreditsUnavailable'),
           });
         },
-        onError: () => toast({ title: t('cloud.toast.refreshFailed'), variant: 'destructive' }),
+        onError: (err) =>
+          toast({
+            title: t('cloud.toast.refreshFailed'),
+            description: getLocalizedErrorMessage(err, t),
+            variant: 'destructive',
+          }),
       },
     );
   };
@@ -543,12 +548,23 @@ export function CloudAccountList() {
         description: t('cloud.toast.batchRefreshSuccess', { count: successful }),
       });
     } else {
+      const firstRejectedResult = results.find((result) => result.status === 'rejected');
+      const firstFailureMessage =
+        firstRejectedResult?.status === 'rejected'
+          ? getLocalizedErrorMessage(firstRejectedResult.reason, t)
+          : null;
+
       toast({
         title: t('cloud.toast.batchRefreshPartial.title'),
-        description: t('cloud.toast.batchRefreshPartial.description', {
-          successful,
-          failed,
-        }),
+        description: firstFailureMessage
+          ? `${t('cloud.toast.batchRefreshPartial.description', {
+              successful,
+              failed,
+            })} ${firstFailureMessage}`
+          : t('cloud.toast.batchRefreshPartial.description', {
+              successful,
+              failed,
+            }),
         variant: 'destructive',
       });
     }

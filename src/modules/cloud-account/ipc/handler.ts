@@ -32,6 +32,7 @@ import {
   extractErrorMessage,
 } from '@/modules/cloud-account/utils/account-status';
 import { withTimingTrace } from '@/shared/observability/timingTrace';
+import { AppError } from '@/shared/errors/appError';
 
 // Helper to update tray
 function notifyTrayUpdate(account: CloudAccount) {
@@ -429,12 +430,21 @@ export async function refreshAccountQuota(accountId: string): Promise<CloudAccou
       account.token = mergeRefreshedToken(account.token, refreshedToken, now);
       await CloudAccountRepo.updateToken(account.id, account.token);
     } catch (error) {
-      logger.error(
+      logger.warn(
         `Failed to refresh token during quota refresh precheck for ${account.email}`,
         error,
       );
       await markAccountStatusFromError(account, error);
-      throw new Error(`Token refresh failed for ${account.email}. Please try logging in again.`);
+      throw new AppError('CLOUD_ACCOUNT_LOGIN_EXPIRED', 'Cloud account login expired', {
+        messageKey: 'error.cloudAccountLoginExpired',
+        reportToSentry: false,
+        transportCode: 'UNAUTHORIZED',
+        metadata: {
+          accountId: account.id,
+          email: account.email,
+        },
+        cause: error,
+      });
     }
   }
 

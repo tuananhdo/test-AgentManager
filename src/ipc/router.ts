@@ -18,6 +18,7 @@ import {
 import { AntigravityAppTargetSchema } from '@/modules/account/types';
 import { systemHandler } from '@/modules/app-shell/ipc/system/handler';
 import { logger } from '../shared/logging/logger';
+import { AppError, getAppErrorData } from '@/shared/errors/appError';
 
 const ProcessTargetInputSchema = z
   .object({ target: AntigravityAppTargetSchema.optional() })
@@ -81,12 +82,22 @@ function createBackendErrorDetails(error: unknown, requestPath: string): Backend
   };
 }
 
-function toPublicORPCError(
+export function toPublicORPCError(
   error: unknown,
   requestPath: string,
 ): ORPCError<string, Record<string, unknown>> {
   const message = stringifyUnknownError(error);
   const backendDetails = createBackendErrorDetails(error, requestPath);
+
+  if (error instanceof AppError) {
+    return new ORPCError(error.transportCode, {
+      message,
+      data: {
+        ...backendDetails,
+        ...getAppErrorData(error),
+      },
+    });
+  }
 
   if (error instanceof ORPCError) {
     const existingData = isPlainObject(error.data) ? error.data : {};

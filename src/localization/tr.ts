@@ -71,6 +71,8 @@ const tr = {
       'Bu hesapta Antigravity proje kimliği eksik. Bu durum, hesap daha önce Antigravity uygulamasında oturum açmadıysa oluşabilir. Lütfen Antigravity uygulamasında bir kez oturum açın, ardından bu araca dönüp değiştirmeyi tekrar deneyin.',
     antigravityDatabasePermissionDenied:
       'Antigravity veritabanı depolama alanı yazılabilir değil. Yapılandırılmış Antigravity user-data dizinini kontrol edin veya Antigravity uygulamasını bir kez açtıktan sonra Antigravity Managerı yeniden başlatın.',
+    cloudAccountLoginExpired:
+      'Bu bulut hesabının giriş bilgileri süresi dolmuş. Lütfen tekrar giriş yapın.',
   },
   nav: {
     accounts: 'Hesaplar',

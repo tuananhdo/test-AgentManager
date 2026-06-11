@@ -164,7 +164,7 @@ describe('decryptWithMigration', () => {
     expect(result.reencrypted).toMatch(/^agm_enc_v1:/);
   });
 
-  it('throws migration error code when legacy keys are unavailable', async () => {
+  it('throws structured migration error when legacy keys are unavailable', async () => {
     keytarMock.getPassword.mockResolvedValue(null);
     fsMock.readFile.mockImplementation(async (_path, encoding) => {
       if (encoding === 'utf8') {
@@ -177,7 +177,11 @@ describe('decryptWithMigration', () => {
     const plaintext = '{"token":"legacy"}';
     const ciphertext = encryptWithKey(Buffer.from('33'.repeat(32), 'hex'), plaintext);
 
-    await expect(decryptWithMigration(ciphertext)).rejects.toThrow('ERR_DATA_MIGRATION_FAILED');
+    await expect(decryptWithMigration(ciphertext)).rejects.toMatchObject({
+      code: 'DATA_MIGRATION_FAILED',
+      messageKey: 'error.dataMigrationFailed',
+      detailMessageKey: 'error.dataMigrationHint.relogin',
+    });
   });
 });
 

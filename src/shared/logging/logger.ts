@@ -4,6 +4,7 @@ import { isObjectLike } from 'lodash-es';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { getAgentDir } from '@/shared/platform/paths';
+import { shouldReportErrorToSentry } from '@/shared/errors/appError';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -143,9 +144,7 @@ class Logger {
   }
 
   private formatArgs(args: unknown[]): string {
-    return args
-      .map((arg) => (isObjectLike(arg) ? safeStringify(arg) : String(arg)))
-      .join(' ');
+    return args.map((arg) => (isObjectLike(arg) ? safeStringify(arg) : String(arg))).join(' ');
   }
 
   log(level: LogLevel, message: string, ...args: unknown[]) {
@@ -167,7 +166,13 @@ class Logger {
       message: mergedMessage,
     });
 
-    if (level === 'error' && this.sentryEnabled && this.sentryReporter) {
+    if (
+      level === 'error' &&
+      this.sentryEnabled &&
+      this.sentryReporter &&
+      shouldReportErrorToSentry(mergedMessage) &&
+      shouldReportErrorToSentry(this.extractError(args))
+    ) {
       this.sentryReporter({
         level,
         message: mergedMessage,

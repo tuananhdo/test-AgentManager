@@ -3,17 +3,16 @@ import { logger } from '@/shared/logging/logger';
 import { safeStorage, app } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
+import { AppError, type AppErrorMetadataByCode } from '@/shared/errors/appError';
 
 const SERVICE_NAME = 'AntigravityManager';
 const ACCOUNT_NAME = 'MasterKey';
-const KEYCHAIN_ERROR_CODE = 'ERR_KEYCHAIN_UNAVAILABLE';
 const KEYCHAIN_HINT_TRANSLOCATION = 'HINT_APP_TRANSLOCATION';
 const KEYCHAIN_HINT_KEYCHAIN_DENIED = 'HINT_KEYCHAIN_DENIED';
 const KEYCHAIN_HINT_SIGN_NOTARIZE = 'HINT_SIGN_NOTARIZE';
-const DATA_MIGRATION_ERROR_CODE = 'ERR_DATA_MIGRATION_FAILED';
-const DATA_MIGRATION_HINT_RELOGIN = 'HINT_RELOGIN';
 
 export type KeySource = 'safeStorage' | 'keytar' | 'file';
+type KeychainAccessHint = AppErrorMetadataByCode['KEYCHAIN_UNAVAILABLE']['hint'];
 
 interface MasterKeyState {
   key: Buffer;
@@ -37,7 +36,7 @@ function getCachedMasterKey() {
   return { key: cachedMasterKey, source: cachedMasterKeySource };
 }
 
-function buildKeychainAccessHint(error: unknown): string | null {
+function buildKeychainAccessHint(error: unknown): KeychainAccessHint {
   if (process.platform !== 'darwin') {
     return null;
   }
@@ -60,6 +59,22 @@ function buildKeychainAccessHint(error: unknown): string | null {
   }
 
   return KEYCHAIN_HINT_SIGN_NOTARIZE;
+}
+
+function getKeychainDetailMessageKey(hint: KeychainAccessHint): string | undefined {
+  if (hint === KEYCHAIN_HINT_TRANSLOCATION) {
+    return 'error.keychainHint.translocation';
+  }
+
+  if (hint === KEYCHAIN_HINT_KEYCHAIN_DENIED) {
+    return 'error.keychainHint.keychainDenied';
+  }
+
+  if (hint === KEYCHAIN_HINT_SIGN_NOTARIZE) {
+    return 'error.keychainHint.signNotarize';
+  }
+
+  return undefined;
 }
 
 // Lock to prevent concurrent key generation
@@ -354,8 +369,12 @@ async function generatePrimaryMasterKey(): Promise<MasterKeyState> {
   } catch (error) {
     const hint = buildKeychainAccessHint(error);
     logger.error('Security: Failed to access keychain/credential manager', error);
-    const message = hint ? `${KEYCHAIN_ERROR_CODE}|${hint}` : KEYCHAIN_ERROR_CODE;
-    throw new Error(message);
+    throw new AppError('KEYCHAIN_UNAVAILABLE', 'Keychain is unavailable', {
+      messageKey: 'error.keychainUnavailable',
+      detailMessageKey: getKeychainDetailMessageKey(hint),
+      metadata: { hint },
+      cause: error,
+    });
   }
 }
 
@@ -372,6 +391,9 @@ export async function encrypt(text: string): Promise<string> {
     const { key } = await getPrimaryMasterKey();
     return encryptWithKey(key, text);
   } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
     logger.error('Security: Encryption failed', error);
     throw new Error('Encryption failed');
   }
@@ -496,7 +518,12 @@ export async function decryptWithMigration(
     logger.error(
       'Security: Decryption failed - authentication tag mismatch (wrong key or corrupted data)',
     );
-    throw new Error(`${DATA_MIGRATION_ERROR_CODE}|${DATA_MIGRATION_HINT_RELOGIN}`);
+    throw new AppError('DATA_MIGRATION_FAILED', 'Data migration failed', {
+      messageKey: 'error.dataMigrationFailed',
+      detailMessageKey: 'error.dataMigrationHint.relogin',
+      metadata: { hint: 'HINT_RELOGIN' },
+      cause: error,
+    });
   }
 }
 

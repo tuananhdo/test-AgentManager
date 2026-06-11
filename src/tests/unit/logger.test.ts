@@ -14,6 +14,8 @@ describe('Logger Utilities', () => {
   let logger: {
     info: (message: string, ...args: unknown[]) => void;
     error: (message: string, ...args: unknown[]) => void;
+    setErrorReportingEnabled: (enabled: boolean) => void;
+    setSentryReporter: (reporter: ((payload: unknown) => void) | null) => void;
   };
 
   const getLatestLogFile = () => {
@@ -59,6 +61,8 @@ describe('Logger Utilities', () => {
   });
 
   afterEach(() => {
+    logger.setErrorReportingEnabled(false);
+    logger.setSentryReporter(null);
     vi.restoreAllMocks();
   });
 
@@ -98,5 +102,40 @@ describe('Logger Utilities', () => {
     const content = fs.readFileSync(filePath as string, 'utf-8');
     expect(content).toContain('[ERROR]');
     expect(content).toContain(message);
+  });
+
+  it('should report raw cloud account token refresh strings to Sentry', async () => {
+    const reporter = vi.fn();
+    const message = 'Token refresh failed for user@example.com. Please try logging in again.';
+
+    logger.setSentryReporter(reporter);
+    logger.setErrorReportingEnabled(true);
+    logger.error(message, new Error(message));
+
+    const filePath = await waitForLogContains(message);
+    expect(filePath).not.toBeNull();
+    expect(reporter).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not report structured non-reportable app errors to Sentry', async () => {
+    const { AppError } = await import('../../shared/errors/appError');
+    const reporter = vi.fn();
+    const message = 'Cloud account login expired';
+
+    logger.setSentryReporter(reporter);
+    logger.setErrorReportingEnabled(true);
+    logger.error(
+      message,
+      new AppError('CLOUD_ACCOUNT_LOGIN_EXPIRED', message, {
+        messageKey: 'error.cloudAccountLoginExpired',
+        reportToSentry: false,
+        transportCode: 'UNAUTHORIZED',
+        metadata: { accountId: 'account-1', email: 'user@example.com' },
+      }),
+    );
+
+    const filePath = await waitForLogContains(message);
+    expect(filePath).not.toBeNull();
+    expect(reporter).not.toHaveBeenCalled();
   });
 });
