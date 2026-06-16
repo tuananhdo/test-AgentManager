@@ -142,8 +142,10 @@ jobs:
             out/make/**/*.deb
             out/make/**/*.rpm
             out/make/**/*.msi
+            out/make/**/*.nupkg
             out/make/**/*.yml
             out/make/**/*.txt
+            out/make/**/RELEASES
           if-no-files-found: error
           retention-days: 14
 
@@ -221,6 +223,45 @@ jobs:
             gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --draft --notes "Automated release draft."
           fi
 
+      - name: Validate release assets
+        run: |
+          mapfile -t installable_assets < <(find release-assets -type f \( \
+            -name '*.exe' -o \
+            -name '*.dmg' -o \
+            -name '*.zip' -o \
+            -name '*.AppImage' -o \
+            -name '*.deb' -o \
+            -name '*.rpm' -o \
+            -name '*.msi' -o \
+            -name '*.nupkg' \
+          \) | sort)
+
+          if [ "${#installable_assets[@]}" -eq 0 ]; then
+            echo "::error::No installable release assets found; refusing to generate updater metadata."
+            exit 1
+          fi
+
+          printf 'Found %s installable release assets.\n' "${#installable_assets[@]}"
+
+      - name: Validate Windows Squirrel update assets
+        run: |
+          mapfile -t squirrel_releases < <(find release-assets -type f -name 'RELEASES' | sort)
+          mapfile -t squirrel_packages < <(find release-assets -type f -name '*.nupkg' | sort)
+
+          if [ "${#squirrel_releases[@]}" -eq 0 ]; then
+            echo "::error::Missing Squirrel RELEASES file; Windows auto-update will fail."
+            exit 1
+          fi
+
+          if [ "${#squirrel_packages[@]}" -eq 0 ]; then
+            echo "::error::Missing Squirrel .nupkg package; Windows auto-update will fail."
+            exit 1
+          fi
+
+          printf 'Found %s Squirrel RELEASES file(s) and %s .nupkg package(s).\n' \
+            "${#squirrel_releases[@]}" \
+            "${#squirrel_packages[@]}"
+
       - name: Generate updater metadata
         env:
           RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
@@ -248,9 +289,11 @@ jobs:
             -name '*.deb' -o \
             -name '*.rpm' -o \
             -name '*.msi' -o \
+            -name '*.nupkg' -o \
             -name '*.yml' -o \
             -name '*.json' -o \
-            -name '*.txt' \
+            -name '*.txt' -o \
+            -name 'RELEASES' \
           \) | sort)
 
           if [ "${#files[@]}" -eq 0 ]; then
