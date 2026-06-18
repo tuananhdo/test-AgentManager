@@ -243,13 +243,23 @@ jobs:
 
           printf 'Found %s installable release assets.\n' "${#installable_assets[@]}"
 
-      - name: Validate Windows Squirrel update assets
+      - name: Validate Windows update assets
         run: |
-          mapfile -t squirrel_releases < <(find release-assets -type f -name 'RELEASES' | sort)
+          mapfile -t windows_setup_exes < <(find release-assets -type f -name '*-win32-*-setup.exe' | sort)
           mapfile -t squirrel_packages < <(find release-assets -type f -name '*.nupkg' | sort)
 
-          if [ "${#squirrel_releases[@]}" -eq 0 ]; then
-            echo "::error::Missing Squirrel RELEASES file; Windows auto-update will fail."
+          if [ "${#windows_setup_exes[@]}" -eq 0 ]; then
+            echo "::error::Missing Windows setup executable with update.electronjs.org-compatible name."
+            exit 1
+          fi
+
+          if ! printf '%s\n' "${windows_setup_exes[@]}" | grep -q -- '-win32-x64-setup\.exe$'; then
+            echo "::error::Missing Windows x64 setup executable named *-win32-x64-setup.exe."
+            exit 1
+          fi
+
+          if ! printf '%s\n' "${windows_setup_exes[@]}" | grep -q -- '-win32-arm64-setup\.exe$'; then
+            echo "::error::Missing Windows arm64 setup executable named *-win32-arm64-setup.exe."
             exit 1
           fi
 
@@ -258,8 +268,8 @@ jobs:
             exit 1
           fi
 
-          printf 'Found %s Squirrel RELEASES file(s) and %s .nupkg package(s).\n' \
-            "${#squirrel_releases[@]}" \
+          printf 'Found %s Windows setup executable(s) and %s .nupkg package(s).\n' \
+            "${#windows_setup_exes[@]}" \
             "${#squirrel_packages[@]}"
 
       - name: Generate updater metadata
@@ -275,6 +285,14 @@ jobs:
             "url": "https://github.com/Draculabo/AntigravityManager/releases/tag/${RELEASE_TAG}"
           }
           EOF
+
+      - name: Prepare Windows static update feed
+        run: node scripts/prepare-windows-update-feed.mjs --source release-assets --output windows-update-feed
+
+      - name: Prepare legacy Windows x64 release feed
+        run: |
+          mkdir -p github-release-assets
+          cp windows-update-feed/win32/x64/RELEASES github-release-assets/RELEASES
 
       - name: Upload assets to release
         env:
@@ -292,9 +310,9 @@ jobs:
             -name '*.nupkg' -o \
             -name '*.yml' -o \
             -name '*.json' -o \
-            -name '*.txt' -o \
-            -name 'RELEASES' \
+            -name '*.txt' \
           \) | sort)
+          files+=("github-release-assets/RELEASES")
 
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::No release assets found under release-assets/"
@@ -303,6 +321,36 @@ jobs:
 
           printf 'Uploading %s assets to %s\n' "${#files[@]}" "$RELEASE_TAG"
           gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+
+      - name: Publish Windows static update feed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        run: |
+          branch_dir="$(mktemp -d)"
+          git init "$branch_dir"
+          git -C "$branch_dir" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git -C "$branch_dir" fetch --depth=1 origin release-updates; then
+            git -C "$branch_dir" checkout -B release-updates FETCH_HEAD
+          else
+            git -C "$branch_dir" checkout --orphan release-updates
+          fi
+
+          find "$branch_dir" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R windows-update-feed/. "$branch_dir"/
+
+          git -C "$branch_dir" config user.name "github-actions[bot]"
+          git -C "$branch_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$branch_dir" add -A
+
+          if git -C "$branch_dir" diff --cached --quiet; then
+            echo "Windows static update feed unchanged."
+            exit 0
+          fi
+
+          git -C "$branch_dir" commit -m "chore: update Windows update feed for ${RELEASE_TAG}"
+          git -C "$branch_dir" push origin HEAD:release-updates
 
       - name: Update flake.nix from release checksums
         env:

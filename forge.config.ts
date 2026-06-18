@@ -21,7 +21,9 @@ import setLanguages from 'electron-packager-languages';
 import * as fs from 'fs';
 import * as path from 'path';
 import { stringify as yamlStringify } from 'yaml';
+import { getArtifactFileName } from './src/shared/packaging/artifactNames';
 import { packageIgnorePatterns } from './src/shared/packaging/forgeIgnore';
+import { normalizeSquirrelArtifacts } from './src/shared/packaging/squirrelArtifacts';
 
 const nativeModules = ['better-sqlite3', 'keytar', 'bindings', 'file-uri-to-path'];
 const ResolvedMakerAppImage = MakerAppImage;
@@ -71,59 +73,8 @@ function normalizeArtifactName(value?: string) {
     .replace(/\.+/g, '.');
 }
 
-function isSquirrelArtifact(artifactPath: string) {
-  const fileName = path.basename(artifactPath);
-  if (fileName === 'RELEASES') {
-    return true;
-  }
-
-  return artifactPath.endsWith('.nupkg');
-}
-
 function mapArchName(arch: string, mapping: Record<string, string>) {
   return mapping[arch] || arch;
-}
-
-function getArtifactFileName({
-  baseName,
-  version,
-  arch,
-  extension,
-}: {
-  baseName: string;
-  version: string;
-  arch: string;
-  extension: string;
-}) {
-  if (extension === '.rpm') {
-    return `${baseName}-${version}-1.${arch}${extension}`;
-  }
-
-  if (extension === '.deb') {
-    return `${baseName}_${version}_${arch}${extension}`;
-  }
-
-  if (extension === '.AppImage') {
-    return `${baseName}_${version}_${arch}${extension}`;
-  }
-
-  if (extension === '.dmg') {
-    return `${baseName}_${version}_${arch}${extension}`;
-  }
-
-  if (extension === '.exe') {
-    return `${baseName}_${version}_${arch}-setup${extension}`;
-  }
-
-  if (extension === '.msi') {
-    return `${baseName}_${version}_${arch}_en-US${extension}`;
-  }
-
-  if (extension === '.zip') {
-    return `${baseName}_${version}_${arch}${extension}`;
-  }
-
-  return `${baseName}_${version}_${arch}${extension}`;
 }
 
 function getUpdateYmlFileName(platform: string, arch: string) {
@@ -305,14 +256,14 @@ const config: ForgeConfig = {
         const updateState = updateKey ? ymlByTarget.get(updateKey)! : null;
         const checksumState = checksumByTarget.get(checksumKey)!;
 
-        result.artifacts = result.artifacts
+        result.artifacts = normalizeSquirrelArtifacts({
+          artifacts: result.artifacts,
+          platform: platformKey,
+          arch: archKey,
+        })
           .map((artifact) => {
             if (!artifact) {
               return null;
-            }
-
-            if (isSquirrelArtifact(artifact)) {
-              return artifact;
             }
 
             if (!artifactRegex.test(artifact)) {

@@ -126,7 +126,9 @@ export function auditWindowsX64Sizes({
       label: 'Squirrel setup.exe',
       filePath: findNewestMatchingFile(
         squirrelDir,
-        (filePath) => filePath.endsWith('.exe') && filePath.includes('_x64-setup'),
+        (filePath) =>
+          filePath.endsWith('.exe') &&
+          (filePath.includes('_x64-setup') || filePath.includes('-win32-x64-setup')),
       ),
       budgetMiB: budgets.setupExeMiB,
     }),

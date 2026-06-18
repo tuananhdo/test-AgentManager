@@ -19,7 +19,10 @@ describe('Windows x64 package size audit', () => {
     const rootDir = await mkdtemp(path.join(tmpdir(), 'agm-size-audit-'));
 
     writeSizedFile(
-      path.join(rootDir, 'out/make/squirrel.windows/x64/Antigravity.Manager_0.16.0_x64-setup.exe'),
+      path.join(
+        rootDir,
+        'out/make/squirrel.windows/x64/Antigravity.Manager-0.16.0-win32-x64-setup.exe',
+      ),
       90,
     );
     writeSizedFile(
@@ -50,7 +53,10 @@ describe('Windows x64 package size audit', () => {
     const rootDir = await mkdtemp(path.join(tmpdir(), 'agm-size-audit-'));
 
     writeSizedFile(
-      path.join(rootDir, 'out/make/squirrel.windows/x64/Antigravity.Manager_0.16.0_x64-setup.exe'),
+      path.join(
+        rootDir,
+        'out/make/squirrel.windows/x64/Antigravity.Manager-0.16.0-win32-x64-setup.exe',
+      ),
       101,
     );
     writeSizedFile(

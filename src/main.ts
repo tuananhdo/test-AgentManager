@@ -38,6 +38,7 @@ import {
 } from '@/modules/app-shell/update/manualUpdateChecker';
 import { isManualUpdateSnoozed } from '@/modules/app-shell/update/manualUpdatePolicy';
 import type { ManualUpdateInfo } from '@/modules/app-shell/update/types';
+import { getWindowsUpdateBaseUrl } from '@/modules/app-shell/update/windowsUpdateSource';
 
 const packetLogPath = path.join(app.getPath('userData'), 'orpc_packets.log');
 
@@ -487,8 +488,8 @@ async function checkForUpdates() {
       const { updateElectronApp, UpdateSourceType } = await import('update-electron-app');
       updateElectronApp({
         updateSource: {
-          type: UpdateSourceType.ElectronPublicUpdateService,
-          repo: 'Draculabo/AntigravityManager',
+          type: UpdateSourceType.StaticStorage,
+          baseUrl: getWindowsUpdateBaseUrl(),
         },
       });
     } catch (error) {
