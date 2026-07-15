@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ProxyRetryPolicy } from '@/modules/proxy-gateway/server/proxy-retry-policy';
 import { UpstreamRequestError } from '@/modules/proxy-gateway/server/clients/upstream-error';
+import { proxyModelAvailabilityStore } from '@/modules/proxy-gateway/server/proxy-model-availability-store';
 import type { CloudAccount } from '@/modules/cloud-account/types';
 
 function createToken(id: string): CloudAccount {
@@ -116,6 +117,39 @@ describe('ProxyRetryPolicy', () => {
       model: 'gemini-3-flash',
     });
   });
+
+  it.each([
+    [404, 'model_not_supported'],
+    [403, 'model_forbidden'],
+  ] as const)(
+    'keeps image-model %i failures scoped to the affected model',
+    async (status, reason) => {
+      proxyModelAvailabilityStore.clearAccount('acc-image');
+      const { policy, accountLeaseService } = createPolicy();
+
+      await policy.applyUpstreamPenalty(
+        'acc-image',
+        'gemini-3-pro-image',
+        new UpstreamRequestError({
+          message: `image request failed with ${status}`,
+          status,
+        }),
+      );
+
+      expect(accountLeaseService.markAsForbidden).not.toHaveBeenCalled();
+      expect(accountLeaseService.markFromUpstreamError).not.toHaveBeenCalled();
+      expect(proxyModelAvailabilityStore.getSnapshot()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            accountId: 'acc-image',
+            modelId: 'gemini-3-pro-image',
+            reason,
+          }),
+        ]),
+      );
+      proxyModelAvailabilityStore.clearAccount('acc-image');
+    },
+  );
 
   it('marks string-classified rate limits on generic errors', async () => {
     const { policy, accountLeaseService } = createPolicy();

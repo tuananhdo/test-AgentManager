@@ -194,6 +194,65 @@ describe('AccountLeaseModelPolicy', () => {
     );
   });
 
+  it('rewrites image models only within their requested quality tier', () => {
+    const tokenCache = new Map([
+      [
+        'acc-1',
+        createToken({
+          model_quotas: {
+            'gemini-3.1-pro-image': 80,
+            'gemini-3.1-flash-image': 80,
+          },
+        }),
+      ],
+    ]);
+    const { policy } = createPolicy(tokenCache);
+
+    expect(policy.resolveDynamicModelForAccount('acc-1', 'gemini-3-pro-image')).toBe(
+      'gemini-3.1-pro-image',
+    );
+    expect(policy.resolveDynamicModelForAccount('acc-1', 'gemini-3-flash-image')).toBe(
+      'gemini-3.1-flash-image',
+    );
+  });
+
+  it('keeps the requested image model when that exact version is available', () => {
+    const tokenCache = new Map([
+      [
+        'acc-1',
+        createToken({
+          model_quotas: {
+            'gemini-3-pro-image': 80,
+            'gemini-3.1-pro-image': 80,
+          },
+        }),
+      ],
+    ]);
+    const { policy } = createPolicy(tokenCache);
+
+    expect(policy.resolveDynamicModelForAccount('acc-1', 'gemini-3-pro-image')).toBe(
+      'gemini-3-pro-image',
+    );
+  });
+
+  it('does not silently downgrade a Pro image request to Flash', () => {
+    const tokenCache = new Map([
+      [
+        'acc-1',
+        createToken({
+          model_quotas: {
+            'gemini-3.1-flash-image': 80,
+          },
+        }),
+      ],
+    ]);
+    const { policy } = createPolicy(tokenCache);
+
+    expect(policy.resolveDynamicModelForAccount('acc-1', 'gemini-3-pro-image')).toBe(
+      'gemini-3-pro-image',
+    );
+  });
+
   it('reads output limits and thinking budgets from token quota state', () => {
     const tokenCache = new Map([
       [

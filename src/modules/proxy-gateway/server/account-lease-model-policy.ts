@@ -22,6 +22,9 @@ const GEMINI_PRO_FAMILY = new Set([
   'gemini-3.1-pro-low',
 ]);
 
+const GEMINI_PRO_IMAGE_FAMILY = new Set(['gemini-3-pro-image', 'gemini-3.1-pro-image']);
+const GEMINI_FLASH_IMAGE_FAMILY = new Set(['gemini-3-flash-image', 'gemini-3.1-flash-image']);
+
 const TIERED_MODEL_SUFFIXES = ['extra-low', 'high', 'medium', 'low'] as const;
 const TIER_PREFERENCE = ['high', 'medium', 'low', 'extra-low'] as const;
 type TieredModelSuffix = (typeof TIER_PREFERENCE)[number];
@@ -81,6 +84,20 @@ export class AccountLeaseModelPolicy {
 
     if (GEMINI_PRO_FAMILY.has(normalizedModel)) {
       return this.buildGeminiProCandidates(normalizedModel);
+    }
+
+    if (GEMINI_PRO_IMAGE_FAMILY.has(normalizedModel)) {
+      return [
+        normalizedModel,
+        ...[...GEMINI_PRO_IMAGE_FAMILY].filter((candidate) => candidate !== normalizedModel),
+      ];
+    }
+
+    if (GEMINI_FLASH_IMAGE_FAMILY.has(normalizedModel)) {
+      return [
+        normalizedModel,
+        ...[...GEMINI_FLASH_IMAGE_FAMILY].filter((candidate) => candidate !== normalizedModel),
+      ];
     }
 
     return null;

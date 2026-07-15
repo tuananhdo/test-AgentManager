@@ -7,6 +7,7 @@ import {
   shouldGraceRetry,
 } from './rate-limit-tracker';
 import { UpstreamRequestError } from './clients/upstream-error';
+import { proxyModelAvailabilityStore } from './proxy-model-availability-store';
 
 export interface ProxyTokenRetryState {
   attemptedAccountIds: Set<string>;
@@ -121,6 +122,29 @@ export class ProxyRetryPolicy {
 
     if (error instanceof UpstreamRequestError) {
       const status = error.status;
+      const isImageModel = model.toLowerCase().includes('-image');
+      if (isImageModel && status === 404) {
+        proxyModelAvailabilityStore.mark(accountId, model, 'model_not_supported');
+        return;
+      }
+      if (isImageModel && status === 403) {
+        proxyModelAvailabilityStore.mark(accountId, model, 'model_forbidden');
+        return;
+      }
+      if (status === 429) {
+        const retryDelayMs = parseRetryDelayMilliseconds(
+          [error.body, error.message].filter(isString).join('\n'),
+        );
+        const lowerBody = error.body?.toLowerCase() ?? '';
+        proxyModelAvailabilityStore.mark(
+          accountId,
+          model,
+          lowerBody.includes('quota') || lowerBody.includes('exhausted')
+            ? 'quota_exhausted'
+            : 'rate_limited',
+          retryDelayMs === null ? undefined : Date.now() + retryDelayMs,
+        );
+      }
       if (status === 401 || status === 403) {
         this.accountLeaseService.markAsForbidden(accountId);
         return;

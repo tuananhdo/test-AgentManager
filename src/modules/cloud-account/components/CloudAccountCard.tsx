@@ -48,6 +48,8 @@ import {
   type QuotaStatus,
 } from '@/modules/cloud-account/utils/quota-display';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ipc } from '@/ipc/manager';
 import { useSetAccountProxy } from '@/modules/cloud-account/hooks/useCloudAccounts';
 import { isValidProxyUrl } from '@/shared/utils/url';
 import { getValidationBlockedStatusLabel } from '@/modules/cloud-account/utils/accountValidationStatus';
@@ -199,6 +201,11 @@ export function CloudAccountCard({
   const [proxyUrl, setProxyUrl] = useState(account.proxy_url || '');
   const [proxySaved, setProxySaved] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: modelAvailability = [] } = useQuery({
+    queryKey: ['gateway', 'modelAvailability'],
+    queryFn: () => ipc.client.gateway.modelAvailability(),
+    refetchInterval: 15_000,
+  });
   const isActiveAnywhere = !!(
     account.is_active_classic ||
     account.is_active_ide ||
@@ -265,40 +272,67 @@ export function CloudAccountCard({
           </span>
           <div className="bg-border/50 h-px flex-1" />
         </div>
-        {models.map(([modelName, info]) => (
-          <div
-            key={modelName}
-            className="group/item hover:bg-muted/60 hover:border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 text-sm transition-all"
-          >
-            <span
-              className="text-muted-foreground group-hover/item:text-foreground min-w-0 truncate font-semibold"
-              title={modelName}
+        {models.map(([modelName, info]) => {
+          const availability = modelAvailability.find(
+            (entry) =>
+              entry.accountId === account.id &&
+              entry.modelId === modelName.replace(/^models\//i, '').toLowerCase(),
+          );
+          const availabilityLabel =
+            availability?.reason === 'model_not_supported'
+              ? t('cloud.card.modelNotSupported', 'This account does not support this model.')
+              : availability?.reason === 'model_forbidden'
+                ? t(
+                    'cloud.card.modelForbidden',
+                    'This model is disabled or unavailable for this account.',
+                  )
+                : availability
+                  ? t(
+                      'cloud.card.modelTemporarilyUnavailable',
+                      'Temporarily unavailable until {{time}}.',
+                      { time: new Date(availability.unavailableUntil).toLocaleTimeString() },
+                    )
+                  : null;
+          return (
+            <div
+              key={modelName}
+              className="group/item hover:bg-muted/60 hover:border-border/60 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 text-sm transition-all"
             >
-              {formatModelDisplayName(modelName)}
-            </span>
-            <div className="flex flex-col items-end gap-0.5">
               <span
-                className="text-muted-foreground text-[9px] leading-none opacity-80"
-                title={formatResetTimeTitleText(info.resetTime)}
+                className="text-muted-foreground group-hover/item:text-foreground min-w-0 truncate font-semibold"
+                title={modelName}
               >
-                {formatResetTimeLabelText(info.resetTime)}
+                {formatModelDisplayName(modelName)}
+                {availabilityLabel && (
+                  <span className="text-destructive ml-1 text-[9px]" title={availabilityLabel}>
+                    {t('cloud.card.modelUnavailable', 'Unavailable')}
+                  </span>
+                )}
               </span>
-              <div className="flex items-baseline gap-1">
+              <div className="flex flex-col items-end gap-0.5">
                 <span
-                  className={`font-mono text-xs leading-none font-bold ${getQuotaTextColorClass(info.percentage)}`}
+                  className="text-muted-foreground text-[9px] leading-none opacity-80"
+                  title={formatResetTimeTitleText(info.resetTime)}
                 >
-                  {info.percentage}%
+                  {formatResetTimeLabelText(info.resetTime)}
                 </span>
-                <div className="bg-muted/70 border-border/20 h-1.5 w-16 overflow-hidden rounded-full border shadow-inner">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${getQuotaBarColorClass(info.percentage)}`}
-                    style={{ width: `${clampQuotaPercentage(info.percentage)}%` }}
-                  />
+                <div className="flex items-baseline gap-1">
+                  <span
+                    className={`font-mono text-xs leading-none font-bold ${getQuotaTextColorClass(info.percentage)}`}
+                  >
+                    {info.percentage}%
+                  </span>
+                  <div className="bg-muted/70 border-border/20 h-1.5 w-16 overflow-hidden rounded-full border shadow-inner">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${getQuotaBarColorClass(info.percentage)}`}
+                      style={{ width: `${clampQuotaPercentage(info.percentage)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

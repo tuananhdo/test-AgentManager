@@ -15,6 +15,7 @@ import { shell } from 'electron';
 import fs from 'fs';
 import { isEmpty, isString } from 'lodash-es';
 import { updateTrayMenu } from '@/modules/app-shell/ipc/tray/handler';
+import { proxyModelAvailabilityStore } from '@/modules/proxy-gateway/server/proxy-model-availability-store';
 import {
   ensureGlobalOriginalFromCurrentStorage,
   generateDeviceProfile,
@@ -491,6 +492,7 @@ export async function refreshAccountQuota(accountId: string): Promise<CloudAccou
     await CloudAccountRepo.updateLastUsed(account.id);
     account.last_used = Math.floor(Date.now() / 1000);
     await clearAccountStatus(account);
+    proxyModelAvailabilityStore.clearCapabilityFailures(account.id);
     notifyTrayUpdate(account);
     return account;
   } catch (error: any) {
@@ -538,6 +540,7 @@ export async function refreshAccountQuota(accountId: string): Promise<CloudAccou
         await CloudAccountRepo.updateLastUsed(account.id);
         account.last_used = Math.floor(Date.now() / 1000);
         await clearAccountStatus(account);
+        proxyModelAvailabilityStore.clearCapabilityFailures(account.id);
         return account;
       } catch (refreshError) {
         logger.error(
